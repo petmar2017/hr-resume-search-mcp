@@ -1,6 +1,13 @@
 # HR Resume Search MCP API
 
+[![GitHub](https://img.shields.io/badge/GitHub-hr--resume--search--mcp-blue)](https://github.com/petmar2017/hr-resume-search-mcp)
+[![Python](https://img.shields.io/badge/Python-3.12-blue)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-latest-green)](https://fastapi.tiangolo.com/)
+[![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
+
 An intelligent resume search and matching system with Model Context Protocol (MCP) integration for advanced HR analytics.
+
+**Repository**: [https://github.com/petmar2017/hr-resume-search-mcp](https://github.com/petmar2017/hr-resume-search-mcp)
 
 ## 🎯 Overview
 

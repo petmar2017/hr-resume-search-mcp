@@ -55,8 +55,8 @@ slowapi==0.1.9
 celery==5.3.4
 redis==5.0.1
 
-# MCP Server
-mcp==0.1.0
+# MCP Server (installed separately from mcp_server/requirements.txt)
+# mcp package is not available on PyPI
 
 # Data Processing
 pandas==2.1.4
