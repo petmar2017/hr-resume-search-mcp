@@ -46,7 +46,7 @@ sqlalchemy-utils==0.41.1
 
 # Security Testing
 bandit==1.7.5  # Security linting
-safety==3.0.1  # Dependency vulnerability scanning
+safety==3.2.3  # Dependency vulnerability scanning
 
 # Monitoring and Debugging
 python-dotenv==1.0.0
