@@ -7,6 +7,8 @@
 **Coverage Target**: 80%  
 **GitHub Repo**: Pending creation (awaiting name decision)
 **Last Updated**: 2025-08-03  
+**Team Status**: Active development across 6 windows  
+**Current Sprint**: Core API Implementation  
 
 ## ✅ Completed Items
 
@@ -19,8 +21,55 @@
 - [x] **DONE-006**: Configured project_config.json with requirements
 - [x] **DONE-007**: Created test structure (unit, integration, e2e)
 - [x] **DONE-008**: Set up MCP server foundation with hr_tools.py
+- [x] **DONE-009**: Created GitHub repository: hr-resume-search-mcp
+- [x] **DONE-010**: Set up Python 3.12 environment with uv package manager
+- [x] **DONE-011**: Created resume upload router with full CRUD operations
+- [x] **DONE-012**: Implemented ClaudeService for AI-powered resume parsing
+- [x] **DONE-013**: Created FileService for PDF/DOCX text extraction
+- [x] **DONE-014**: Updated config.py with Claude API and file upload settings
 
-## 🎯 Phase 1: Foundation (Current)
+## 🚀 Active Development (Current)
+
+### Team Task Assignments (In Progress)
+
+**Window 2 - API Developer**: Search Router Implementation
+- [ ] **IN-PROGRESS-001**: Create /api/routers/search.py
+- [ ] POST /api/v1/search/candidates - Smart candidate search
+- [ ] POST /api/v1/search/similar - Find similar profiles
+- [ ] POST /api/v1/search/colleagues - Find former colleagues
+- [ ] GET /api/v1/search/filters - Available search filters
+
+**Window 3 - Integration Specialist**: Main Application Integration
+- [ ] **IN-PROGRESS-002**: Include all routers in main.py
+- [ ] Add database initialization in lifespan manager
+- [ ] Configure CORS from environment variables
+- [ ] Add error handlers and request logging middleware
+- [ ] Implement rate limiting with slowapi
+
+**Window 4 - Database Engineer**: Alembic Migrations
+- [ ] **IN-PROGRESS-003**: Initialize Alembic configuration
+- [ ] Create initial migration for all models
+- [ ] Create seed data script with test users and sample data
+- [ ] Update Makefile with migration commands
+
+**Window 5 - Documentation Specialist**: API Documentation
+- [ ] **IN-PROGRESS-004**: Update api.md with all new endpoints
+- [ ] Document resume upload and search endpoints
+- [ ] Add request/response examples and curl commands
+- [ ] Create Postman collection
+
+**Window 6 - QA Engineer**: Test Implementation (85% Coverage Target)
+- [ ] **IN-PROGRESS-005**: Create comprehensive unit tests
+- [ ] Create integration tests for resume upload flow
+- [ ] Create E2E tests for complete workflows
+- [ ] Implement test factories and mock Claude API
+
+**Window 7 - API Testing Specialist**: Testing Notebook
+- [ ] **IN-PROGRESS-006**: Create API testing Jupyter notebook
+- [ ] Include authentication, upload, and search demos
+- [ ] Add performance testing and data visualization
+
+## 🎯 Phase 1: Foundation (90% Complete)
 
 ### Database Setup
 - [ ] **TODO-001**: Create PostgreSQL database schema for resumes

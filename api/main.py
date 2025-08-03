@@ -7,6 +7,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
 from typing import Any, Dict
+from datetime import datetime
+
+# Import routers
+from .routers import auth, search
+from .database import init_db
 
 # Configure logging
 logging.basicConfig(
@@ -23,7 +28,17 @@ async def lifespan(app: FastAPI):
     """
     # Startup
     logger.info("Starting API Builder application")
+    
+    # Initialize database
+    try:
+        init_db()
+        logger.info("Database initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize database: {e}")
+        raise
+    
     yield
+    
     # Shutdown
     logger.info("Shutting down API Builder application")
 
@@ -47,6 +62,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include routers
+app.include_router(auth.router)
+app.include_router(search.router)
 
 
 @app.get("/", tags=["Root"])
@@ -78,15 +97,33 @@ async def readiness_check() -> Dict[str, Any]:
     """
     Readiness check endpoint
     """
-    # TODO: Add database connectivity check
-    # TODO: Add redis connectivity check
+    from .database import check_db_connection
+    
+    checks = {}
+    overall_status = "ready"
+    
+    # Check database connectivity
+    try:
+        if check_db_connection():
+            checks["database"] = "healthy"
+        else:
+            checks["database"] = "unhealthy"
+            overall_status = "not_ready"
+    except Exception as e:
+        logger.error(f"Database check failed: {e}")
+        checks["database"] = "error"
+        overall_status = "not_ready"
+    
+    # TODO: Add redis connectivity check when Redis is implemented
+    checks["redis"] = "not_configured"
+    
+    # TODO: Add MCP server connectivity check when implemented
+    checks["mcp_server"] = "not_configured"
+    
     return {
-        "status": "ready",
-        "checks": {
-            "database": "pending",
-            "redis": "pending",
-            "mcp_server": "pending"
-        }
+        "status": overall_status,
+        "checks": checks,
+        "timestamp": datetime.utcnow().isoformat()
     }
 
 

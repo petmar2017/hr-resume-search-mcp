@@ -131,86 +131,209 @@ Invalidate current tokens.
 ### Resume Management
 
 #### POST /api/v1/resumes/upload
-Upload a resume file for processing.
+Upload a resume file for processing with AI-powered parsing.
 
-**Request:**
-- Method: `POST`
-- Content-Type: `multipart/form-data`
-- Authentication: Required
+**Authentication**: Required
+**Content-Type**: `multipart/form-data`
+**File Limits**: 10MB max, supports PDF, DOC, DOCX
 
 **Form Data:**
 ```
-file: <resume_file> (PDF, DOC, or DOCX)
-candidate_email: user@example.com (optional)
-metadata: {"source": "upload", "recruiter_id": "123"} (optional JSON)
+file: <resume_file> (Required - PDF, DOC, or DOCX)
+```
+
+**cURL Example:**
+```bash
+curl -X POST "http://localhost:8000/api/v1/resumes/upload" \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "file=@resume.pdf"
 ```
 
 **Response:**
 ```json
 {
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "status": "processing",
-  "message": "Resume uploaded successfully",
-  "processing_id": "proc_123456",
-  "estimated_time": 30
+  "success": true,
+  "file_id": "550e8400-e29b-41d4-a716-446655440000",
+  "filename": "john_doe_resume.pdf",
+  "status": "completed",
+  "message": "Resume uploaded successfully. Processing in progress.",
+  "upload_timestamp": "2024-01-20T10:30:00Z"
 }
 ```
 
 **Error Responses:**
-- `400 Bad Request`: Invalid file format
+- `400 Bad Request`: Invalid file format or validation error
+- `401 Unauthorized`: Authentication required
 - `413 Payload Too Large`: File exceeds 10MB limit
 - `422 Unprocessable Entity`: File corrupted or unreadable
+- `500 Internal Server Error`: Processing failed
 
-#### GET /api/v1/resumes/{resume_id}
-Get detailed information about a specific resume.
+#### GET /api/v1/resumes/{file_id}
+Get detailed information about a specific resume by file ID.
+
+**Authentication**: Required
+**Permissions**: Users can only access their own resumes unless admin
 
 **Parameters:**
-- `resume_id` (path): UUID of the resume
+- `file_id` (path): UUID of the resume file
+
+**cURL Example:**
+```bash
+curl -X GET "http://localhost:8000/api/v1/resumes/550e8400-e29b-41d4-a716-446655440000" \
+  -H "Authorization: Bearer $TOKEN"
+```
 
 **Response:**
 ```json
 {
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "candidate": {
-    "name": "John Doe",
+  "id": 1,
+  "file_id": "550e8400-e29b-41d4-a716-446655440000",
+  "original_filename": "john_doe_resume.pdf",
+  "file_size": 1024768,
+  "file_type": "pdf",
+  "status": "completed",
+  "upload_timestamp": "2024-01-20T10:30:00Z",
+  "parsed_timestamp": "2024-01-20T10:30:45Z",
+  "raw_text": "John Doe\nSenior Software Developer...",
+  "parsed_data": {
+    "full_name": "John Doe",
     "email": "john.doe@example.com",
     "phone": "+1-555-0123",
-    "location": "New York, NY"
+    "location": "New York, NY",
+    "work_experiences": [
+      {
+        "company": "Tech Corp",
+        "position": "Senior Developer",
+        "department": "Engineering",
+        "start_date": "2020-01-15T00:00:00Z",
+        "end_date": "2023-06-30T00:00:00Z",
+        "description": "Led development of microservices architecture"
+      }
+    ],
+    "skills": [
+      {
+        "name": "Python",
+        "level": "Expert",
+        "years_of_experience": 8,
+        "category": "Programming"
+      }
+    ],
+    "education": [
+      {
+        "institution": "MIT",
+        "degree": "BS Computer Science",
+        "level": "bachelors",
+        "end_date": "2019-05-15T00:00:00Z"
+      }
+    ]
   },
-  "work_experience": [
-    {
-      "company": "Tech Corp",
-      "position": "Senior Developer",
-      "department": "Engineering",
-      "desk": "Platform Team",
-      "start_date": "2020-01-15",
-      "end_date": "2023-06-30",
-      "description": "Led development of microservices architecture"
-    }
-  ],
-  "skills": [
-    {
-      "name": "Python",
-      "category": "Programming",
-      "proficiency": "Expert"
-    },
-    {
-      "name": "FastAPI",
-      "category": "Framework",
-      "proficiency": "Advanced"
-    }
-  ],
-  "education": [
-    {
-      "institution": "MIT",
-      "degree": "BS Computer Science",
-      "graduation_date": "2019-05-15"
-    }
-  ],
-  "parsed_at": "2024-01-20T10:30:00Z",
-  "original_format": "pdf",
-  "processing_status": "completed"
+  "candidate": {
+    "id": "candidate-uuid",
+    "name": "John Doe",
+    "email": "john.doe@example.com"
+  }
 }
+```
+
+**Error Responses:**
+- `401 Unauthorized`: Authentication required
+- `403 Forbidden`: Not authorized to view this resume
+- `404 Not Found`: Resume not found
+#### GET /api/v1/resumes/
+List resumes with optional filtering and pagination.
+
+**Authentication**: Required
+**Permissions**: Users see only their own resumes unless admin
+
+**Query Parameters:**
+- `skip` (int): Number of records to skip (default: 0)
+- `limit` (int): Maximum records to return (default: 100, max: 100)
+- `status` (string): Filter by status (pending, processing, completed, failed)
+
+**cURL Example:**
+```bash
+curl -X GET "http://localhost:8000/api/v1/resumes/?limit=10&status=completed" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "file_id": "550e8400-e29b-41d4-a716-446655440000",
+    "original_filename": "john_doe_resume.pdf",
+    "file_size": 1024768,
+    "status": "completed",
+    "upload_timestamp": "2024-01-20T10:30:00Z",
+    "candidate": {
+      "name": "John Doe",
+      "email": "john.doe@example.com"
+    }
+  }
+]
+```
+
+#### DELETE /api/v1/resumes/{file_id}
+Delete a resume and its associated file.
+
+**Authentication**: Required
+**Permissions**: Users can only delete their own resumes unless admin
+
+**Parameters:**
+- `file_id` (path): UUID of the resume file
+
+**cURL Example:**
+```bash
+curl -X DELETE "http://localhost:8000/api/v1/resumes/550e8400-e29b-41d4-a716-446655440000" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Response:**
+```json
+{
+  "message": "Resume deleted successfully"
+}
+```
+
+**Error Responses:**
+- `401 Unauthorized`: Authentication required
+- `403 Forbidden`: Not authorized to delete this resume
+- `404 Not Found`: Resume not found
+
+#### POST /api/v1/resumes/{file_id}/reprocess
+Reprocess a resume with Claude AI (useful for failed or outdated parsing).
+
+**Authentication**: Required
+**Permissions**: Users can only reprocess their own resumes unless admin
+
+**Parameters:**
+- `file_id` (path): UUID of the resume file
+
+**cURL Example:**
+```bash
+curl -X POST "http://localhost:8000/api/v1/resumes/550e8400-e29b-41d4-a716-446655440000/reprocess" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Response:**
+```json
+{
+  "message": "Resume reprocessed successfully",
+  "status": "completed",
+  "parsed_data": {
+    "full_name": "John Doe",
+    "email": "john.doe@example.com",
+    "skills": ["Python", "FastAPI", "Docker"]
+  }
+}
+```
+
+**Error Responses:**
+- `401 Unauthorized`: Authentication required
+- `403 Forbidden`: Not authorized to reprocess this resume
+- `404 Not Found`: Resume or file not found
+- `500 Internal Server Error`: Reprocessing failed
 ```
 
 #### GET /api/v1/resumes/search
