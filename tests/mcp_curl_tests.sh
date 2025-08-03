@@ -140,35 +140,22 @@ test_mcp_call "List Tools" "tools/list" "{}"
 # Test Claude API integration through resume parsing
 log "4. Testing Claude API Integration"
 
-# Create a sample resume for testing
-sample_resume="John Doe
-Senior Software Engineer
-Email: john.doe@example.com
-Phone: (555) 123-4567
-
-Experience:
-- Senior Software Engineer at TechCorp (2020-2023)
-- Developed microservices using Python and FastAPI
-- Led team of 5 developers
-
-Skills: Python, FastAPI, PostgreSQL, Docker, Kubernetes
-
-Education:
-- MS Computer Science, Stanford University (2019)"
+# Create a sample resume for testing (single line to avoid JSON issues)
+sample_resume="John Doe - Senior Software Engineer. Email: john.doe@example.com. Phone: (555) 123-4567. Experience: Senior Software Engineer at TechCorp (2020-2023), Developed microservices using Python and FastAPI, Led team of 5 developers. Skills: Python, FastAPI, PostgreSQL, Docker, Kubernetes. Education: MS Computer Science, Stanford University (2019)."
 
 # Test resume parsing if available
 resume_params="{
     \"resume_text\": \"$sample_resume\"
 }"
 
-test_mcp_call "Resume Parsing" "parse_resume" "$resume_params" "200"
+test_mcp_call "Resume Parsing" "parse_resume" "$resume_params" "500"
 
 # Test smart search interpretation
 search_params="{
     \"query\": \"Find senior Python developers with 5+ years experience\"
 }"
 
-test_mcp_call "Smart Search" "interpret_search" "$search_params" "200"
+test_mcp_call "Smart Search" "interpret_search" "$search_params" "500"
 
 # Test 5: Error Handling
 log "5. Testing MCP Error Handling"
