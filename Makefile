@@ -180,20 +180,44 @@ type-check: ## Run type checking
 .PHONY: db-migrate
 db-migrate: ## Run database migrations
 	@echo "$(BOLD)Running migrations...$(RESET)"
-	# TODO: Add alembic migrations
-	@echo "$(YELLOW)⚠ Migrations pending implementation$(RESET)"
+	$(UV) run alembic upgrade head
+	@echo "$(GREEN)✓ Migrations complete$(RESET)"
 
 .PHONY: db-rollback
 db-rollback: ## Rollback database migration
 	@echo "$(BOLD)Rolling back migration...$(RESET)"
-	# TODO: Add rollback command
-	@echo "$(YELLOW)⚠ Rollback pending implementation$(RESET)"
+	$(UV) run alembic downgrade -1
+	@echo "$(GREEN)✓ Rollback complete$(RESET)"
 
 .PHONY: db-seed
 db-seed: ## Seed database with test data
 	@echo "$(BOLD)Seeding database...$(RESET)"
-	# TODO: Add seed script
-	@echo "$(YELLOW)⚠ Database seeding pending implementation$(RESET)"
+	python3 scripts/seed_data_sync.py
+	@echo "$(GREEN)✓ Database seeded$(RESET)"
+
+.PHONY: db-status
+db-status: ## Show database migration status
+	@echo "$(BOLD)Database Status:$(RESET)"
+	$(UV) run alembic current
+	$(UV) run alembic history --verbose
+
+.PHONY: db-create-migration
+db-create-migration: ## Create new migration (use MSG="description")
+	@if [ -z "$(MSG)" ]; then \
+		echo "$(RED)Usage: make db-create-migration MSG=\"add_new_table\"$(RESET)"; \
+	else \
+		$(UV) run alembic revision --autogenerate -m "$(MSG)"; \
+		echo "$(GREEN)✓ Migration created$(RESET)"; \
+	fi
+
+.PHONY: db-reset
+db-reset: ## Reset database (CAUTION: destroys all data)
+	@echo "$(RED)⚠ This will destroy all data. Continue? [y/N]$(RESET)"
+	@read confirmation && [ "$$confirmation" = "y" ] || exit 1
+	$(UV) run alembic downgrade base
+	$(UV) run alembic upgrade head
+	python3 scripts/seed_data_sync.py
+	@echo "$(GREEN)✓ Database reset complete$(RESET)"
 
 # === Docker ===
 .PHONY: docker-build
