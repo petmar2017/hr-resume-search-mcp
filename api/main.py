@@ -434,7 +434,8 @@ async def metrics_endpoint(request: Request) -> Dict[str, Any]:
             total_resumes = db.query(Resume).count()
             
             # Resume status breakdown
-            resume_stats = db.query(Resume.status, db.func.count(Resume.id)).group_by(Resume.status).all()
+            from sqlalchemy import func
+            resume_stats = db.query(Resume.status, func.count(Resume.id)).group_by(Resume.status).all()
             
             return {
                 "service": settings.app_name,

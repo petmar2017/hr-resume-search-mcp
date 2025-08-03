@@ -21,8 +21,8 @@ from api.config import get_settings
 
 # Override settings for testing
 os.environ["ENVIRONMENT"] = "testing"
-os.environ["DATABASE_URL"] = "postgresql+asyncpg://test_user:test_pass@localhost:5432/test_db"
-os.environ["REDIS_URL"] = "redis://localhost:6379/1"
+os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///test.db"
+os.environ["REDIS_URL"] = "redis://localhost:6379/1" 
 os.environ["JWT_SECRET_KEY"] = "test-secret-key-for-testing-only"
 
 
