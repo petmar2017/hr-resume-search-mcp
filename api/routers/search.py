@@ -347,32 +347,32 @@ async def search_candidates(
                     Candidate.is_active == True,
                     Resume.parsing_status == "completed"
                 )
-        
-        # Apply filters based on search type
-        if search_request.search_type == SearchType.SKILLS_MATCH:
-            if search_request.skills:
-                # Search for candidates with matching skills
-                skills_filter = []
-                for skill in search_request.skills:
-                    skills_filter.append(
-                        func.jsonb_contains(
-                            cast(Resume.skills, JSONB),
-                            cast(json.dumps([skill]), JSONB)
+            
+            # Apply filters based on search type
+            if search_request.search_type == SearchType.SKILLS_MATCH:
+                if search_request.skills:
+                    # Search for candidates with matching skills
+                    skills_filter = []
+                    for skill in search_request.skills:
+                        skills_filter.append(
+                            func.jsonb_contains(
+                                cast(Resume.skills, JSONB),
+                                cast(json.dumps([skill]), JSONB)
+                            )
                         )
+                    if skills_filter:
+                        query = query.filter(or_(*skills_filter))
+            
+            elif search_request.search_type == SearchType.SAME_DEPARTMENT:
+                if search_request.departments:
+                    # Join with WorkExperience to search by department
+                    query = query.join(
+                        WorkExperience, WorkExperience.candidate_id == Candidate.id
+                    ).filter(
+                        WorkExperience.department.in_(search_request.departments)
                     )
-                if skills_filter:
-                    query = query.filter(or_(*skills_filter))
-        
-        elif search_request.search_type == SearchType.SAME_DEPARTMENT:
-            if search_request.departments:
-                # Join with WorkExperience to search by department
-                query = query.join(
-                    WorkExperience, WorkExperience.candidate_id == Candidate.id
-                ).filter(
-                    WorkExperience.department.in_(search_request.departments)
-                )
-        
-        elif search_request.search_type == SearchType.EXPERIENCE_MATCH:
+            
+            elif search_request.search_type == SearchType.EXPERIENCE_MATCH:
             # Filter by experience years
             if search_request.min_experience_years:
                 query = query.filter(
