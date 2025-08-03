@@ -748,6 +748,9 @@ async def list_available_tools() -> Dict[str, List[Dict[str, str]]]:
 async def main():
     """Main entry point for the MCP server."""
     try:
+        # Register HR-specific tools
+        register_hr_tools(app)
+        
         # Initialize server
         async with stdio_server() as (read_stream, write_stream):
             await app.run(
