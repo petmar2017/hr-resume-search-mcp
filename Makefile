@@ -4,6 +4,8 @@ export UV_PYTHON
 UV := uv
 PYTHON := $(UV) run python
 PROJECT := hr-resume-search-mcp
+VENV := .venv
+VENV_PYTHON := $(VENV)/bin/python
 
 # === Colors ===
 RESET := \033[0m
@@ -74,6 +76,10 @@ run: ## Run the application
 
 .PHONY: dev
 dev: ## Run in development mode with auto-reload
+	@if [ ! -d "$(VENV)" ]; then \
+		echo "$(YELLOW)Virtual environment not found. Creating...$(RESET)"; \
+		$(MAKE) setup; \
+	fi
 	$(UV) run uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
 
 .PHONY: shell
@@ -289,7 +295,7 @@ db-rollback: ## Rollback database migration
 .PHONY: db-seed
 db-seed: ## Seed database with test data
 	@echo "$(BOLD)Seeding database...$(RESET)"
-	python3 scripts/seed_data_sync.py
+	$(PYTHON) scripts/seed_data_sync.py
 	@echo "$(GREEN)✓ Database seeded$(RESET)"
 
 .PHONY: db-status
