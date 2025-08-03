@@ -1,0 +1,90 @@
+{
+  "concurrent_search": {
+    "total_queries": 100,
+    "successful_queries": 100,
+    "failed_queries": 0,
+    "overall_time": 0.5540690422058105,
+    "queries_per_second": 180.48292249263534,
+    "cache_hit_rate": 3.0,
+    "search_time_stats": {
+      "min": 2.86102294921875e-06,
+      "max": 0.15449213981628418,
+      "mean": 0.08711458206176757,
+      "median": 0.08797252178192139,
+      "std_dev": 0.02496183252200723
+    },
+    "result_count_stats": {
+      "min": 10,
+      "max": 100,
+      "mean": 59.13
+    },
+    "max_concurrent": 20
+  },
+  "sustained_search": {
+    "target_queries_per_second": 10,
+    "duration_seconds": 15,
+    "total_queries_executed": 150,
+    "successful_queries": 150,
+    "actual_queries_per_second": 9.373954334525045,
+    "cache_hit_rate": 23.333333333333332,
+    "total_time": 16.001784801483154
+  },
+  "complexity_test": {
+    "complexity_levels": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "complexity_results": [
+      {
+        "complexity_level": 1,
+        "total_queries": 20,
+        "total_time": 0.12739205360412598,
+        "avg_search_time": 0.08086950778961181,
+        "avg_result_count": 50,
+        "queries_per_second": 156.99566365536822
+      },
+      {
+        "complexity_level": 2,
+        "total_queries": 20,
+        "total_time": 0.14610791206359863,
+        "avg_search_time": 0.0954585313796997,
+        "avg_result_count": 50,
+        "queries_per_second": 136.8851263256318
+      },
+      {
+        "complexity_level": 3,
+        "total_queries": 20,
+        "total_time": 0.18224310874938965,
+        "avg_search_time": 0.11809406280517579,
+        "avg_result_count": 50,
+        "queries_per_second": 109.74351862875025
+      },
+      {
+        "complexity_level": 4,
+        "total_queries": 20,
+        "total_time": 0.20569205284118652,
+        "avg_search_time": 0.1389245867729187,
+        "avg_result_count": 50,
+        "queries_per_second": 97.23273079218995
+      },
+      {
+        "complexity_level": 5,
+        "total_queries": 20,
+        "total_time": 0.22560787200927734,
+        "avg_search_time": 0.15360027551651,
+        "avg_result_count": 50,
+        "queries_per_second": 88.6493889680302
+      }
+    ]
+  },
+  "cache_performance": {
+    "cache_hit_improvement": 100,
+    "cache_miss_count": 50,
+    "total_cache_hits": 178,
+    "total_cache_misses": 372,
+    "cache_hit_rate": 32.36363636363636
+  }
+}

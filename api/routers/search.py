@@ -30,6 +30,40 @@ router = APIRouter(
 )
 
 
+@router.get("/test-performance")
+async def test_search_performance(
+    db: Session = Depends(get_db)
+):
+    """
+    Test endpoint for performance measurement (no auth required)
+    """
+    start_time = datetime.utcnow()
+    
+    try:
+        # Simple performance test query
+        with get_db_metrics_tracker(db).track_query("SELECT", "performance_test"):
+            results = db.query(Candidate).filter(
+                Candidate.is_active == True
+            ).limit(10).all()
+        
+        processing_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
+        
+        return {
+            "success": True,
+            "processing_time_ms": processing_time,
+            "results_count": len(results),
+            "timestamp": datetime.utcnow().isoformat(),
+            "message": "Performance test completed successfully"
+        }
+    except Exception as e:
+        processing_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
+        return {
+            "success": False,
+            "error": str(e),
+            "processing_time_ms": processing_time,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
 @router.get("/skills")
 async def search_by_skills(
     skills: str = Query(..., description="Comma-separated list of skills"),

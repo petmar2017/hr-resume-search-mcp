@@ -82,12 +82,20 @@ shell: ## Start interactive Python shell
 
 # === Testing ===
 .PHONY: test
-test: ## Run all tests (Python, curl, MCP integration)
+test: ## Run all tests (Python, curl, MCP integration, enhanced services)
 	@echo "$(BOLD)Running comprehensive test suite...$(RESET)"
 	$(MAKE) test-python
 	$(MAKE) test-curl
 	$(MAKE) test-mcp
+	$(MAKE) test-enhanced
 	@echo "$(GREEN)✓ All tests completed$(RESET)"
+
+.PHONY: test-all
+test-all: ## Run all tests including load tests (comprehensive)
+	@echo "$(BOLD)Running complete test suite with load tests...$(RESET)"
+	$(MAKE) test
+	$(MAKE) test-load
+	@echo "$(GREEN)✓ Complete test suite finished$(RESET)"
 
 .PHONY: test-python
 test-python: ## Run Python pytest suite
@@ -134,7 +142,7 @@ test-debug: ## Run tests with debugger on failure
 test-curl: ## Run curl-based API tests
 	@echo "$(BOLD)Running curl API tests...$(RESET)"
 	@if curl -s -f http://localhost:8000/health > /dev/null; then \
-		chmod +x tests/simple_curl_tests.sh tests/run_all_tests.sh; \
+		chmod +x tests/simple_curl_tests.sh tests/run_all_tests.sh tests/curl_tests.sh 2>/dev/null || true; \
 		tests/simple_curl_tests.sh; \
 	else \
 		echo "$(RED)Error: FastAPI server not running on localhost:8000$(RESET)"; \
@@ -165,6 +173,19 @@ test-comprehensive: ## Run comprehensive test suite with detailed reporting
 		echo "Start server with: make dev"; \
 		exit 1; \
 	fi
+
+.PHONY: test-enhanced
+test-enhanced: ## Run enhanced service capability tests
+	@echo "$(BOLD)Running enhanced service tests...$(RESET)"
+	$(PYTHON) test_minimal_file_service.py
+	$(PYTHON) test_end_to_end_streaming_workflow.py
+	@if [ -f tests/integration/test_claude_service_enhanced.py ]; then \
+		$(PYTHON) -m pytest tests/integration/test_claude_service_enhanced.py -v; \
+	fi
+	@if [ -f tests/integration/test_file_service_enhanced.py ]; then \
+		$(PYTHON) -m pytest tests/integration/test_file_service_enhanced.py -v; \
+	fi
+	@echo "$(GREEN)✓ Enhanced service tests completed$(RESET)"
 
 .PHONY: test-jupyter
 test-jupyter: ## Run Jupyter notebook API tests
@@ -429,6 +450,73 @@ performance-test: ## Run performance validation tests
 	done
 	@echo "$(GREEN)✓ Performance test completed$(RESET)"
 	@echo "$(CYAN)Check Grafana dashboard for detailed metrics$(RESET)"
+
+# === Load Testing ===
+.PHONY: test-load
+test-load: ## Run all load tests (upload, search, MCP streaming)
+	@echo "$(BOLD)Running comprehensive load tests...$(RESET)"
+	$(MAKE) test-load-upload
+	$(MAKE) test-load-search
+	$(MAKE) test-load-mcp
+	@echo "$(GREEN)✓ All load tests completed$(RESET)"
+
+.PHONY: test-load-upload
+test-load-upload: ## Run concurrent resume upload load tests
+	@echo "$(BOLD)Running concurrent upload load tests...$(RESET)"
+	$(PYTHON) tests/load/test_concurrent_resume_upload.py
+	@echo "$(GREEN)✓ Upload load tests completed$(RESET)"
+
+.PHONY: test-load-search
+test-load-search: ## Run high-volume search query load tests
+	@echo "$(BOLD)Running high-volume search load tests...$(RESET)"
+	$(PYTHON) tests/load/test_high_volume_search.py
+	@echo "$(GREEN)✓ Search load tests completed$(RESET)"
+
+.PHONY: test-load-mcp
+test-load-mcp: ## Run MCP streaming response load tests
+	@echo "$(BOLD)Running MCP streaming load tests...$(RESET)"
+	@if [ -f tests/load/test_mcp_streaming.py ]; then \
+		$(PYTHON) tests/load/test_mcp_streaming.py; \
+	else \
+		echo "$(YELLOW)⚠ MCP streaming tests pending implementation$(RESET)"; \
+	fi
+	@echo "$(GREEN)✓ MCP load tests completed$(RESET)"
+
+.PHONY: test-load-report
+test-load-report: ## Generate comprehensive load test report
+	@echo "$(BOLD)Generating load test report...$(RESET)"
+	@mkdir -p reports
+	@echo "# Load Test Report - $(shell date)" > reports/load_test_report.md
+	@echo "" >> reports/load_test_report.md
+	@echo "## Test Results Summary" >> reports/load_test_report.md
+	@if [ -f concurrent_upload_load_test_results.json ]; then \
+		echo "### Concurrent Upload Tests" >> reports/load_test_report.md; \
+		echo "\`\`\`json" >> reports/load_test_report.md; \
+		cat concurrent_upload_load_test_results.json >> reports/load_test_report.md; \
+		echo "\`\`\`" >> reports/load_test_report.md; \
+	fi
+	@if [ -f high_volume_search_load_test_results.json ]; then \
+		echo "### High-Volume Search Tests" >> reports/load_test_report.md; \
+		echo "\`\`\`json" >> reports/load_test_report.md; \
+		cat high_volume_search_load_test_results.json >> reports/load_test_report.md; \
+		echo "\`\`\`" >> reports/load_test_report.md; \
+	fi
+	@echo "$(GREEN)✓ Load test report generated: reports/load_test_report.md$(RESET)"
+
+.PHONY: test-stress
+test-stress: ## Run stress tests with high concurrency
+	@echo "$(BOLD)Running stress tests...$(RESET)"
+	@echo "$(YELLOW)⚠ High resource usage expected$(RESET)"
+	$(PYTHON) tests/load/test_concurrent_resume_upload.py
+	@echo "$(GREEN)✓ Stress tests completed$(RESET)"
+
+.PHONY: test-performance-baseline
+test-performance-baseline: ## Establish performance baselines
+	@echo "$(BOLD)Establishing performance baselines...$(RESET)"
+	@mkdir -p reports/baselines
+	@echo "Recording baseline metrics..."
+	$(MAKE) test-load > reports/baselines/baseline_$(shell date +%Y%m%d_%H%M%S).log 2>&1
+	@echo "$(GREEN)✓ Performance baseline recorded$(RESET)"
 
 # === Default ===
 .DEFAULT_GOAL := help

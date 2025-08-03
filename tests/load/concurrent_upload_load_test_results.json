@@ -1,0 +1,165 @@
+{
+  "basic_concurrent": {
+    "total_files": 50,
+    "successful_uploads": 45,
+    "failed_uploads": 5,
+    "exceptions": 0,
+    "total_time": 1.47855806350708,
+    "average_time_per_file": 0.029571161270141602,
+    "throughput_files_per_second": 33.81673079608522,
+    "processing_time_stats": {
+      "min": 0.0805211067199707,
+      "max": 0.4020097255706787,
+      "mean": 0.251567284266154,
+      "median": 0.2514519691467285,
+      "std_dev": 0.08373708000884411
+    },
+    "success_rate": 90.0,
+    "max_concurrent": 10
+  },
+  "burst_load": {
+    "burst_count": 5,
+    "burst_size": 20,
+    "total_files": 100,
+    "total_successful": 100,
+    "overall_time": 3.0159659385681152,
+    "overall_throughput": 33.15687313348002,
+    "success_rate": 100.0,
+    "burst_results": [
+      {
+        "burst_number": 1,
+        "burst_time": 0.20549869537353516,
+        "successful_files": 20,
+        "total_files": 20,
+        "burst_throughput": 97.32421884064024
+      },
+      {
+        "burst_number": 2,
+        "burst_time": 0.2049851417541504,
+        "successful_files": 20,
+        "total_files": 20,
+        "burst_throughput": 97.56804726845552
+      },
+      {
+        "burst_number": 3,
+        "burst_time": 0.2009139060974121,
+        "successful_files": 20,
+        "total_files": 20,
+        "burst_throughput": 99.54512551412493
+      },
+      {
+        "burst_number": 4,
+        "burst_time": 0.2033989429473877,
+        "successful_files": 20,
+        "total_files": 20,
+        "burst_throughput": 98.32892791961712
+      },
+      {
+        "burst_number": 5,
+        "burst_time": 0.19836163520812988,
+        "successful_files": 20,
+        "total_files": 20,
+        "burst_throughput": 100.82594841999114
+      }
+    ],
+    "average_burst_time": 0.20263166427612306,
+    "average_burst_throughput": 98.7184535925658
+  },
+  "sustained_load": {
+    "target_files_per_second": 5,
+    "duration_seconds": 10,
+    "total_files_uploaded": 50,
+    "successful_uploads": 49,
+    "actual_files_per_second": 4.999795683627087,
+    "success_rate": 98.0,
+    "total_time": 10.00040864944458
+  },
+  "stress_test": {
+    "max_files": 30,
+    "concurrency_levels": [
+      5,
+      10,
+      20,
+      50
+    ],
+    "stress_results": [
+      {
+        "total_files": 30,
+        "successful_uploads": 27,
+        "failed_uploads": 3,
+        "exceptions": 0,
+        "total_time": 1.6668000221252441,
+        "average_time_per_file": 0.055560000737508136,
+        "throughput_files_per_second": 17.998559876276378,
+        "processing_time_stats": {
+          "min": 0.10653400421142578,
+          "max": 0.40770816802978516,
+          "mean": 0.25848925555193863,
+          "median": 0.2607710361480713,
+          "std_dev": 0.08010749819336747
+        },
+        "success_rate": 90.0,
+        "max_concurrent": 5,
+        "concurrency_level": 5
+      },
+      {
+        "total_files": 30,
+        "successful_uploads": 30,
+        "failed_uploads": 0,
+        "exceptions": 0,
+        "total_time": 0.9055039882659912,
+        "average_time_per_file": 0.03018346627553304,
+        "throughput_files_per_second": 33.13072100041101,
+        "processing_time_stats": {
+          "min": 0.09474396705627441,
+          "max": 0.39693689346313477,
+          "mean": 0.2519094785054525,
+          "median": 0.24639546871185303,
+          "std_dev": 0.08027398352888163
+        },
+        "success_rate": 100.0,
+        "max_concurrent": 10,
+        "concurrency_level": 10
+      },
+      {
+        "total_files": 30,
+        "successful_uploads": 28,
+        "failed_uploads": 2,
+        "exceptions": 0,
+        "total_time": 0.5979599952697754,
+        "average_time_per_file": 0.019931999842325847,
+        "throughput_files_per_second": 50.17058036878406,
+        "processing_time_stats": {
+          "min": 0.13500595092773438,
+          "max": 0.393402099609375,
+          "mean": 0.27297262634549824,
+          "median": 0.25858044624328613,
+          "std_dev": 0.06815192430379947
+        },
+        "success_rate": 93.33333333333333,
+        "max_concurrent": 20,
+        "concurrency_level": 20
+      },
+      {
+        "total_files": 30,
+        "successful_uploads": 29,
+        "failed_uploads": 1,
+        "exceptions": 0,
+        "total_time": 0.3891332149505615,
+        "average_time_per_file": 0.012971107165018718,
+        "throughput_files_per_second": 77.09442126088217,
+        "processing_time_stats": {
+          "min": 0.10457658767700195,
+          "max": 0.38895726203918457,
+          "mean": 0.23271822929382324,
+          "median": 0.22626209259033203,
+          "std_dev": 0.07610651574762872
+        },
+        "success_rate": 96.66666666666667,
+        "max_concurrent": 50,
+        "concurrency_level": 50
+      }
+    ],
+    "optimal_concurrency": 50
+  }
+}
