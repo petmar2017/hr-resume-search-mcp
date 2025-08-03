@@ -100,10 +100,12 @@ class Settings(BaseSettings):
             raise ValueError(f"Log level must be one of: {allowed}")
         return v
     
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "case_sensitive": False,
+        "extra": "ignore"  # Ignore extra fields from environment
+    }
         
     @property
     def is_development(self) -> bool:

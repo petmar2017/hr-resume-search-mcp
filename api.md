@@ -336,6 +336,454 @@ curl -X POST "http://localhost:8000/api/v1/resumes/550e8400-e29b-41d4-a716-44665
 - `500 Internal Server Error`: Reprocessing failed
 ```
 
+### Authentication Management
+
+#### POST /api/v1/auth/register
+Register a new user account.
+
+**Authentication**: Not required
+**Rate Limit**: 5 requests per minute
+
+**Request:**
+```json
+{
+  "email": "user@example.com",
+  "username": "john_doe",
+  "password": "SecurePass123!",
+  "full_name": "John Doe"
+}
+```
+
+**cURL Example:**
+```bash
+curl -X POST "http://localhost:8000/api/v1/auth/register" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "username": "john_doe",
+    "password": "SecurePass123!",
+    "full_name": "John Doe"
+  }'
+```
+
+**Response:**
+```json
+{
+  "id": 1,
+  "uuid": "user-uuid-here",
+  "email": "user@example.com",
+  "username": "john_doe",
+  "full_name": "John Doe",
+  "role": "user",
+  "is_active": true,
+  "is_verified": false,
+  "created_at": "2024-01-20T10:30:00Z",
+  "last_login": null
+}
+```
+
+**Error Responses:**
+- `400 Bad Request`: Validation error or user already exists
+- `422 Unprocessable Entity`: Invalid email or weak password
+- `429 Too Many Requests`: Rate limit exceeded
+
+#### GET /api/v1/auth/me
+Get current user information.
+
+**Authentication**: Required
+
+**cURL Example:**
+```bash
+curl -X GET "http://localhost:8000/api/v1/auth/me" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Response:**
+```json
+{
+  "id": 1,
+  "uuid": "user-uuid-here",
+  "email": "user@example.com",
+  "username": "john_doe",
+  "full_name": "John Doe",
+  "role": "user",
+  "is_active": true,
+  "is_verified": false,
+  "created_at": "2024-01-20T10:30:00Z",
+  "last_login": "2024-01-20T09:15:00Z"
+}
+```
+
+#### POST /api/v1/auth/api-keys
+Create a new API key for the current user.
+
+**Authentication**: Required
+
+**Request:**
+```json
+{
+  "name": "Production API Key",
+  "description": "API key for production deployment",
+  "scopes": ["read:resumes", "write:resumes"],
+  "expires_in_days": 90
+}
+```
+
+**Response:**
+```json
+{
+  "id": 1,
+  "key": "hrapi_1234567890abcdef",
+  "name": "Production API Key",
+  "description": "API key for production deployment",
+  "scopes": ["read:resumes", "write:resumes"],
+  "is_active": true,
+  "created_at": "2024-01-20T10:30:00Z",
+  "expires_at": "2024-04-20T10:30:00Z",
+  "last_used": null
+}
+```
+
+#### GET /api/v1/auth/api-keys
+List all active API keys for the current user.
+
+**Authentication**: Required
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "name": "Production API Key",
+    "description": "API key for production deployment",
+    "scopes": ["read:resumes", "write:resumes"],
+    "is_active": true,
+    "created_at": "2024-01-20T10:30:00Z",
+    "expires_at": "2024-04-20T10:30:00Z",
+    "last_used": null
+  }
+]
+```
+
+#### DELETE /api/v1/auth/api-keys/{key_id}
+Revoke an API key.
+
+**Authentication**: Required
+
+**Parameters:**
+- `key_id` (path): ID of the API key to revoke
+
+**Response:**
+```json
+{
+  "message": "API key revoked successfully"
+}
+```
+
+### Search & Discovery
+
+#### POST /api/v1/search/candidates
+Smart candidate search with multiple criteria and filters.
+
+**Authentication**: Required
+**Rate Limit**: 30 requests per minute
+
+**Request:**
+```json
+{
+  "query": "Senior Python developer",
+  "search_type": "skills_match",
+  "skills": ["Python", "FastAPI", "Docker"],
+  "min_experience_years": 5,
+  "max_experience_years": 15,
+  "companies": ["Tech Corp", "StartupXYZ"],
+  "departments": ["Engineering", "Platform"],
+  "locations": ["New York, NY", "San Francisco, CA"],
+  "education_level": "bachelors",
+  "limit": 20,
+  "offset": 0
+}
+```
+
+**cURL Example:**
+```bash
+curl -X POST "http://localhost:8000/api/v1/search/candidates" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "Senior Python developer",
+    "search_type": "skills_match",
+    "skills": ["Python", "FastAPI"],
+    "min_experience_years": 5,
+    "limit": 10
+  }'
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "query": "Senior Python developer",
+  "search_type": "skills_match",
+  "total_results": 45,
+  "results": [
+    {
+      "candidate_id": "candidate-uuid-1",
+      "resume_id": "resume-uuid-1",
+      "full_name": "John Doe",
+      "current_position": "Senior Software Engineer",
+      "current_company": "Tech Corp",
+      "total_experience_years": 8.5,
+      "match_score": 0.92,
+      "match_reasons": [
+        "Skills: Python, FastAPI, Docker",
+        "Worked at Tech Corp",
+        "Worked in Engineering"
+      ],
+      "highlights": {
+        "skills": ["Python", "FastAPI", "Docker", "Kubernetes", "PostgreSQL"],
+        "location": "New York, NY",
+        "headline": "Senior Software Engineer with 8+ years experience"
+      }
+    }
+  ],
+  "processing_time_ms": 127,
+  "timestamp": "2024-01-20T10:30:00Z"
+}
+```
+
+**Search Types:**
+- `similar_candidates`: Find candidates with similar profiles
+- `same_department`: Find candidates from same department/desk
+- `worked_with`: Find candidates who worked together
+- `skills_match`: Find candidates with matching skills
+- `experience_match`: Find candidates with similar experience level
+
+#### POST /api/v1/search/similar
+Find profiles similar to a given candidate.
+
+**Authentication**: Required
+
+**Query Parameters:**
+- `candidate_id` (string): UUID of the reference candidate
+- `limit` (int): Maximum results to return (default: 10, max: 50)
+
+**cURL Example:**
+```bash
+curl -X POST "http://localhost:8000/api/v1/search/similar?candidate_id=candidate-uuid&limit=5" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "query": "Similar to John Doe",
+  "search_type": "similar_candidates",
+  "total_results": 12,
+  "results": [
+    {
+      "candidate_id": "candidate-uuid-2",
+      "resume_id": "resume-uuid-2",
+      "full_name": "Jane Smith",
+      "current_position": "Senior Developer",
+      "current_company": "StartupXYZ",
+      "total_experience_years": 7.0,
+      "match_score": 0.89,
+      "match_reasons": [
+        "Common skills: Python, FastAPI, Docker",
+        "Similar experience: 7 years",
+        "Same department: Engineering"
+      ],
+      "highlights": {
+        "skills": ["Python", "React", "Docker", "AWS", "GraphQL"],
+        "location": "San Francisco, CA",
+        "headline": "Full-stack developer specializing in Python backends"
+      }
+    }
+  ],
+  "processing_time_ms": 89
+}
+```
+
+#### POST /api/v1/search/colleagues
+Find former colleagues who worked with a candidate.
+
+**Authentication**: Required
+
+**Query Parameters:**
+- `candidate_id` (string): UUID of the reference candidate
+- `limit` (int): Maximum results to return (default: 10, max: 50)
+
+**cURL Example:**
+```bash
+curl -X POST "http://localhost:8000/api/v1/search/colleagues?candidate_id=candidate-uuid&limit=10" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "query": "Colleagues of John Doe",
+  "search_type": "worked_with",
+  "total_results": 8,
+  "results": [
+    {
+      "candidate_id": "candidate-uuid-3",
+      "resume_id": "resume-uuid-3",
+      "full_name": "Bob Johnson",
+      "current_position": "Engineering Manager",
+      "current_company": "NewTech Inc",
+      "total_experience_years": 12.0,
+      "match_score": 0.85,
+      "match_reasons": [
+        "Worked together at Tech Corp",
+        "Overlap: 24 months",
+        "Same department: Engineering"
+      ],
+      "highlights": {
+        "company": "Tech Corp",
+        "department": "Engineering",
+        "overlap_months": 24,
+        "positions": {
+          "original": "Senior Developer",
+          "colleague": "Tech Lead"
+        }
+      }
+    }
+  ],
+  "processing_time_ms": 156
+}
+```
+
+#### GET /api/v1/search/filters
+Get available search filters with counts for faceted search.
+
+**Authentication**: Required
+
+**cURL Example:**
+```bash
+curl -X GET "http://localhost:8000/api/v1/search/filters" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Response:**
+```json
+{
+  "companies": [
+    {"name": "Tech Corp", "count": 45},
+    {"name": "StartupXYZ", "count": 32},
+    {"name": "BigTech Inc", "count": 28}
+  ],
+  "departments": [
+    {"name": "Engineering", "count": 120},
+    {"name": "Product", "count": 45},
+    {"name": "Data Science", "count": 23}
+  ],
+  "locations": [
+    {"name": "New York, NY", "count": 78},
+    {"name": "San Francisco, CA", "count": 65},
+    {"name": "Austin, TX", "count": 34}
+  ],
+  "skills": [
+    {"name": "Python", "count": 89},
+    {"name": "JavaScript", "count": 76},
+    {"name": "React", "count": 54}
+  ],
+  "experience_range": {
+    "min": 0,
+    "max": 25,
+    "average": 7.8
+  },
+  "education_levels": [
+    {"value": "high_school", "label": "High School"},
+    {"value": "bachelors", "label": "Bachelor's Degree"},
+    {"value": "masters", "label": "Master's Degree"},
+    {"value": "phd", "label": "PhD"},
+    {"value": "other", "label": "Other"}
+  ],
+  "search_types": [
+    {"value": "similar_candidates", "label": "Similar Candidates"},
+    {"value": "same_department", "label": "Same Department/Desk"},
+    {"value": "worked_with", "label": "Worked Together"},
+    {"value": "skills_match", "label": "Skills Match"},
+    {"value": "experience_match", "label": "Experience Match"}
+  ],
+  "statistics": {
+    "total_candidates": 234,
+    "total_resumes": 189,
+    "last_updated": "2024-01-20T10:30:00Z"
+  }
+}
+```
+
+#### POST /api/v1/search/smart
+Natural language search powered by AI interpretation.
+
+**Authentication**: Required
+**Rate Limit**: 20 requests per minute (AI-powered)
+
+**Request:**
+```json
+{
+  "query": "Find me Python developers with 5+ years who worked at startups",
+  "limit": 15,
+  "include_reasoning": true
+}
+```
+
+**cURL Example:**
+```bash
+curl -X POST "http://localhost:8000/api/v1/search/smart" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "Find me Python developers with 5+ years who worked at startups",
+    "limit": 10,
+    "include_reasoning": true
+  }'
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "interpreted_query": {
+    "original_query": "Find me Python developers with 5+ years who worked at startups",
+    "detected_intent": "skills_match",
+    "extracted_criteria": {
+      "skills": ["python"],
+      "min_experience_years": 5
+    }
+  },
+  "results": [
+    {
+      "candidate_id": "candidate-uuid-4",
+      "resume_id": "resume-uuid-4",
+      "full_name": "Alice Chen",
+      "current_position": "Senior Python Developer",
+      "current_company": "FastGrow Startup",
+      "total_experience_years": 6.5,
+      "match_score": 0.94,
+      "match_reasons": [
+        "Skills: Python",
+        "Experience: 6.5 years (meets 5+ requirement)"
+      ]
+    }
+  ],
+  "reasoning": "I interpreted your query as looking for skills match. I detected these skills: python. I found you're looking for candidates with at least 5 years of experience. I found 12 matching candidates.",
+  "suggested_queries": [
+    "Show me senior python developers",
+    "Find candidates who worked at top tech companies",
+    "Show me candidates with leadership experience"
+  ],
+  "processing_time_ms": 234
+}
+```
+
+### Legacy Search Endpoints (DEPRECATED)
+
 #### GET /api/v1/resumes/search
 Search resumes with various filters.
 

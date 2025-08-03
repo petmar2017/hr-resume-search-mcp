@@ -1,0 +1,626 @@
+{
+  "info": {
+    "name": "HR Resume Search MCP API",
+    "description": "Complete API collection for HR Resume Search with MCP integration. Includes authentication, resume management, and intelligent search capabilities.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string",
+      "description": "Base URL for the API"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string",
+      "description": "JWT access token for authentication"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string",
+      "description": "JWT refresh token"
+    },
+    {
+      "key": "file_id",
+      "value": "",
+      "type": "string",
+      "description": "Resume file ID for testing"
+    },
+    {
+      "key": "candidate_id",
+      "value": "",
+      "type": "string",
+      "description": "Candidate UUID for testing"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health & Status",
+      "item": [
+        {
+          "name": "Root Endpoint",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": ["{{base_url}}"],
+              "path": [""]
+            },
+            "description": "Basic API information and status"
+          },
+          "response": []
+        },
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            },
+            "description": "Health check endpoint for monitoring"
+          },
+          "response": []
+        },
+        {
+          "name": "Readiness Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/readiness",
+              "host": ["{{base_url}}"],
+              "path": ["readiness"]
+            },
+            "description": "Readiness check for Kubernetes deployments"
+          },
+          "response": []
+        }
+      ],
+      "description": "Health and status endpoints for monitoring"
+    },
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.test('User created successfully', () => {",
+                  "        pm.expect(response.email).to.exist;",
+                  "        pm.expect(response.uuid).to.exist;",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"username\": \"testuser\",\n  \"password\": \"SecurePass123!\",\n  \"full_name\": \"Test User\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "register"]
+            },
+            "description": "Register a new user account"
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('access_token', response.access_token);",
+                  "    pm.collectionVariables.set('refresh_token', response.refresh_token);",
+                  "    pm.test('Login successful', () => {",
+                  "        pm.expect(response.access_token).to.exist;",
+                  "        pm.expect(response.token_type).to.eql('bearer');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "test@example.com",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "SecurePass123!",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "Authenticate user and get JWT tokens"
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('access_token', response.access_token);",
+                  "    pm.test('Token refreshed successfully', () => {",
+                  "        pm.expect(response.access_token).to.exist;",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "refresh"]
+            },
+            "description": "Refresh access token using refresh token"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "me"]
+            },
+            "description": "Get current user information"
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "logout"]
+            },
+            "description": "Logout current user"
+          },
+          "response": []
+        },
+        {
+          "name": "Create API Key",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test API Key\",\n  \"description\": \"API key for testing\",\n  \"scopes\": [\"read:resumes\", \"write:resumes\"],\n  \"expires_in_days\": 30\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/api-keys",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "api-keys"]
+            },
+            "description": "Create a new API key"
+          },
+          "response": []
+        },
+        {
+          "name": "List API Keys",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/api-keys",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "api-keys"]
+            },
+            "description": "List all API keys for current user"
+          },
+          "response": []
+        }
+      ],
+      "description": "User authentication and API key management"
+    },
+    {
+      "name": "Resume Management",
+      "item": [
+        {
+          "name": "Upload Resume",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('file_id', response.file_id);",
+                  "    pm.test('Resume uploaded successfully', () => {",
+                  "        pm.expect(response.file_id).to.exist;",
+                  "        pm.expect(response.status).to.exist;",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "Resume file (PDF, DOC, or DOCX)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/resumes/upload",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "resumes", "upload"]
+            },
+            "description": "Upload a resume file for AI-powered parsing"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Resume by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/resumes/{{file_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "resumes", "{{file_id}}"]
+            },
+            "description": "Get detailed resume information by file ID"
+          },
+          "response": []
+        },
+        {
+          "name": "List Resumes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/resumes/?limit=10&status=completed",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "resumes", ""],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "completed"
+                },
+                {
+                  "key": "skip",
+                  "value": "0",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List resumes with optional filtering"
+          },
+          "response": []
+        },
+        {
+          "name": "Reprocess Resume",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/resumes/{{file_id}}/reprocess",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "resumes", "{{file_id}}", "reprocess"]
+            },
+            "description": "Reprocess a resume with Claude AI"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Resume",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/resumes/{{file_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "resumes", "{{file_id}}"]
+            },
+            "description": "Delete a resume and its associated file"
+          },
+          "response": []
+        }
+      ],
+      "description": "Resume upload, processing, and management"
+    },
+    {
+      "name": "Search & Discovery",
+      "item": [
+        {
+          "name": "Search Candidates",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.results && response.results.length > 0) {",
+                  "        pm.collectionVariables.set('candidate_id', response.results[0].candidate_id);",
+                  "    }",
+                  "    pm.test('Search executed successfully', () => {",
+                  "        pm.expect(response.total_results).to.exist;",
+                  "        pm.expect(response.processing_time_ms).to.exist;",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"Senior Python developer\",\n  \"search_type\": \"skills_match\",\n  \"skills\": [\"Python\", \"FastAPI\"],\n  \"min_experience_years\": 3,\n  \"max_experience_years\": 15,\n  \"companies\": [],\n  \"departments\": [\"Engineering\"],\n  \"locations\": [],\n  \"limit\": 10,\n  \"offset\": 0\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/search/candidates",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "search", "candidates"]
+            },
+            "description": "Smart candidate search with multiple criteria"
+          },
+          "response": []
+        },
+        {
+          "name": "Find Similar Profiles",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/search/similar?candidate_id={{candidate_id}}&limit=5",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "search", "similar"],
+              "query": [
+                {
+                  "key": "candidate_id",
+                  "value": "{{candidate_id}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "Find candidates with similar profiles"
+          },
+          "response": []
+        },
+        {
+          "name": "Find Former Colleagues",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/search/colleagues?candidate_id={{candidate_id}}&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "search", "colleagues"],
+              "query": [
+                {
+                  "key": "candidate_id",
+                  "value": "{{candidate_id}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Find former colleagues who worked with a candidate"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Search Filters",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/search/filters",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "search", "filters"]
+            },
+            "description": "Get available search filters with counts"
+          },
+          "response": []
+        },
+        {
+          "name": "Smart Natural Language Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"Find me Python developers with 5+ years who worked at startups\",\n  \"limit\": 10,\n  \"include_reasoning\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/search/smart",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "search", "smart"]
+            },
+            "description": "Natural language search powered by AI interpretation"
+          },
+          "response": []
+        }
+      ],
+      "description": "Intelligent search and discovery features"
+    },
+    {
+      "name": "Legacy Endpoints (DEPRECATED)",
+      "item": [
+        {
+          "name": "Legacy Resume Search",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/resumes/search?q=python&skills[]=Python&limit=5",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "resumes", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "python"
+                },
+                {
+                  "key": "skills[]",
+                  "value": "Python"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "Legacy search endpoint (DEPRECATED - use /api/v1/search/candidates)"
+          },
+          "response": []
+        }
+      ],
+      "description": "Legacy endpoints that are deprecated"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-set authorization header if token exists",
+          "const token = pm.collectionVariables.get('access_token');",
+          "if (token) {",
+          "    pm.request.headers.add({",
+          "        key: 'Authorization',",
+          "        value: `Bearer ${token}`",
+          "    });",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global test to check for rate limiting",
+          "if (pm.response.code === 429) {",
+          "    pm.test('Rate limit encountered', () => {",
+          "        pm.expect(pm.response.json().detail).to.include('rate limit');",
+          "    });",
+          "}",
+          "",
+          "// Global test for authentication errors",
+          "if (pm.response.code === 401) {",
+          "    pm.test('Authentication required', () => {",
+          "        pm.expect(pm.response.json().detail).to.exist;",
+          "    });",
+          "}"
+        ]
+      }
+    }
+  ]
+}
