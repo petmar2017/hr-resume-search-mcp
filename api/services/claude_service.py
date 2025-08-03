@@ -5,7 +5,7 @@ import os
 from typing import Dict, Any, Optional
 from datetime import datetime
 
-from anthropic import Anthropic, HUMAN_PROMPT, AI_PROMPT
+from anthropic import Anthropic
 from ..config import settings
 
 class ClaudeService:
