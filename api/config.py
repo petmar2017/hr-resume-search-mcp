@@ -60,6 +60,18 @@ class Settings(BaseSettings):
     mcp_server_url: Optional[str] = Field(default=None, env="MCP_SERVER_URL")
     mcp_server_timeout: int = Field(default=30, env="MCP_SERVER_TIMEOUT")
     
+    # Claude AI Integration
+    claude_api_key: Optional[str] = Field(default=None, env="CLAUDE_API_KEY")
+    claude_model: str = Field(default="claude-3-opus-20240229", env="CLAUDE_MODEL")
+    
+    # File Upload Configuration
+    upload_dir: str = Field(default="uploads", env="UPLOAD_DIR")
+    max_upload_size: int = Field(default=10 * 1024 * 1024, env="MAX_UPLOAD_SIZE")  # 10MB
+    allowed_file_types: List[str] = Field(
+        default=[".pdf", ".doc", ".docx"],
+        env="ALLOWED_FILE_TYPES"
+    )
+    
     # Monitoring
     enable_metrics: bool = Field(default=True, env="ENABLE_METRICS")
     prometheus_url: Optional[str] = Field(default=None, env="PROMETHEUS_URL")
