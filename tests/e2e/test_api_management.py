@@ -44,14 +44,23 @@ class TestAPIManagement:
         # assert isinstance(data, list)
     
     @pytest.mark.asyncio
-    async def test_create_endpoint(self, authenticated_client: AsyncClient, sample_project: dict):
+    async def test_create_endpoint(self, authenticated_client: AsyncClient):
         """Test creating an API endpoint"""
+        # First create a project
+        project_data = {
+            "name": "Test Project",
+            "slug": "test-project",
+            "description": "A test project for E2E testing"
+        }
+        project_response = await authenticated_client.post("/api/v1/projects", json=project_data)
+        project = project_response.json()
+        
         endpoint_data = {
             "path": "/api/v1/candidates",
             "method": "GET",
             "name": "List Candidates",
             "description": "Retrieve list of candidates",
-            "project_id": sample_project["id"],
+            "project_id": project["id"],
             "auth_required": True,
             "rate_limit": 60,
             "request_schema": {
@@ -183,8 +192,17 @@ class TestAPIManagement:
         # assert "slug" in response2.json()["detail"].lower()
     
     @pytest.mark.asyncio
-    async def test_endpoint_path_validation(self, authenticated_client: AsyncClient, sample_project: dict):
+    async def test_endpoint_path_validation(self, authenticated_client: AsyncClient):
         """Test endpoint path validation"""
+        # First create a project
+        project_data = {
+            "name": "Test Project",
+            "slug": "test-project-validation",
+            "description": "A test project for validation testing"
+        }
+        project_response = await authenticated_client.post("/api/v1/projects", json=project_data)
+        project = project_response.json()
+        
         invalid_paths = [
             "",  # Empty path
             "no-leading-slash",  # Missing leading slash
@@ -197,7 +215,7 @@ class TestAPIManagement:
                 "path": invalid_path,
                 "method": "GET",
                 "name": "Invalid Endpoint",
-                "project_id": sample_project["id"]
+                "project_id": project["id"]
             }
             
             # TODO: Implement path validation
@@ -205,11 +223,20 @@ class TestAPIManagement:
             # assert response.status_code == 422, f"Path '{invalid_path}' should be invalid"
     
     @pytest.mark.asyncio
-    async def test_api_documentation_generation(self, authenticated_client: AsyncClient, sample_project: dict):
+    async def test_api_documentation_generation(self, authenticated_client: AsyncClient):
         """Test automatic API documentation generation"""
+        # First create a project
+        project_data = {
+            "name": "Test Project",
+            "slug": "test-project-docs",
+            "description": "A test project for documentation testing"
+        }
+        project_response = await authenticated_client.post("/api/v1/projects", json=project_data)
+        project = project_response.json()
+        
         # TODO: Implement documentation generation
         # response = await authenticated_client.get(
-        #     f"/api/v1/projects/{sample_project['id']}/openapi"
+        #     f"/api/v1/projects/{project['id']}/openapi"
         # )
         # 
         # assert response.status_code == 200
@@ -218,4 +245,4 @@ class TestAPIManagement:
         # assert "openapi" in openapi_spec
         # assert "info" in openapi_spec
         # assert "paths" in openapi_spec
-        # assert openapi_spec["info"]["title"] == sample_project["name"]
+        # assert openapi_spec["info"]["title"] == project["name"]

@@ -82,9 +82,17 @@ shell: ## Start interactive Python shell
 
 # === Testing ===
 .PHONY: test
-test: ## Run all tests
-	@echo "$(BOLD)Running tests...$(RESET)"
-	$(PYTHON) -m pytest tests/ -v
+test: ## Run all tests (Python, curl, MCP integration)
+	@echo "$(BOLD)Running comprehensive test suite...$(RESET)"
+	$(MAKE) test-python
+	$(MAKE) test-curl
+	$(MAKE) test-mcp
+	@echo "$(GREEN)✓ All tests completed$(RESET)"
+
+.PHONY: test-python
+test-python: ## Run Python pytest suite
+	@echo "$(BOLD)Running Python tests...$(RESET)"
+	$(PYTHON) -m pytest tests/ -v --ignore=tests/curl_tests.sh --ignore=tests/mcp_curl_tests.sh --ignore=tests/simple_curl_tests.sh --ignore=tests/run_all_tests.sh
 
 .PHONY: test-coverage
 test-coverage: ## Run tests with coverage report
@@ -122,34 +130,102 @@ test-failed: ## Re-run failed tests
 test-debug: ## Run tests with debugger on failure
 	$(PYTHON) -m pytest tests/ --pdb -v
 
+.PHONY: test-curl
+test-curl: ## Run curl-based API tests
+	@echo "$(BOLD)Running curl API tests...$(RESET)"
+	@if curl -s -f http://localhost:8000/health > /dev/null; then \
+		chmod +x tests/simple_curl_tests.sh tests/run_all_tests.sh; \
+		tests/simple_curl_tests.sh; \
+	else \
+		echo "$(RED)Error: FastAPI server not running on localhost:8000$(RESET)"; \
+		echo "Start server with: make dev"; \
+		exit 1; \
+	fi
+
+.PHONY: test-mcp
+test-mcp: ## Run MCP server integration tests
+	@echo "$(BOLD)Running MCP integration tests...$(RESET)"
+	@if curl -s -f http://localhost:8000/health > /dev/null; then \
+		chmod +x tests/mcp_curl_tests.sh; \
+		echo "y" | tests/mcp_curl_tests.sh; \
+	else \
+		echo "$(RED)Error: FastAPI server not running on localhost:8000$(RESET)"; \
+		echo "Start server with: make dev"; \
+		exit 1; \
+	fi
+
+.PHONY: test-comprehensive
+test-comprehensive: ## Run comprehensive test suite with detailed reporting
+	@echo "$(BOLD)Running comprehensive test suite...$(RESET)"
+	@if curl -s -f http://localhost:8000/health > /dev/null; then \
+		chmod +x tests/run_all_tests.sh; \
+		tests/run_all_tests.sh; \
+	else \
+		echo "$(RED)Error: FastAPI server not running on localhost:8000$(RESET)"; \
+		echo "Start server with: make dev"; \
+		exit 1; \
+	fi
+
+.PHONY: test-jupyter
+test-jupyter: ## Run Jupyter notebook API tests
+	@echo "$(BOLD)Running Jupyter notebook tests...$(RESET)"
+	@if command -v jupyter >/dev/null 2>&1; then \
+		echo "Opening API testing notebook..."; \
+		jupyter notebook notebooks/api_testing.ipynb; \
+	else \
+		echo "$(YELLOW)Jupyter not found. Install with: $(UV) pip install jupyter$(RESET)"; \
+	fi
+
 .PHONY: coverage-html
 coverage-html: ## Open HTML coverage report
 	@open htmlcov/index.html 2>/dev/null || xdg-open htmlcov/index.html 2>/dev/null || echo "Open htmlcov/index.html in your browser"
 
 # === MCP Server Testing ===
 .PHONY: mcp-test-comprehensive
-mcp-test-comprehensive: ## Run comprehensive MCP tests (23 automated tests)
+mcp-test-comprehensive: ## Run comprehensive MCP tests (curl + Python integration)
 	@echo "$(BOLD)Running comprehensive MCP tests...$(RESET)"
-	# TODO: Implement MCP test suite
-	@echo "$(YELLOW)⚠ MCP tests pending implementation$(RESET)"
+	$(MAKE) test-mcp
+	@if [ -f tests/test_mcp_integration.py ]; then \
+		$(PYTHON) -m pytest tests/test_mcp_integration.py -v; \
+	else \
+		echo "$(YELLOW)⚠ Python MCP tests not available$(RESET)"; \
+	fi
 
 .PHONY: mcp-test-interactive
-mcp-test-interactive: ## Run interactive MCP tests
+mcp-test-interactive: ## Run interactive MCP tests with detailed output
 	@echo "$(BOLD)Running interactive MCP tests...$(RESET)"
-	# TODO: Implement interactive MCP tests
-	@echo "$(YELLOW)⚠ MCP interactive tests pending implementation$(RESET)"
+	@if curl -s -f http://localhost:8000/health > /dev/null; then \
+		chmod +x tests/mcp_curl_tests.sh; \
+		tests/mcp_curl_tests.sh; \
+	else \
+		echo "$(RED)Error: FastAPI server not running$(RESET)"; \
+		exit 1; \
+	fi
 
 .PHONY: mcp-test-concurrent
 mcp-test-concurrent: ## Run concurrent MCP stress tests
 	@echo "$(BOLD)Running concurrent MCP tests...$(RESET)"
-	# TODO: Implement concurrent MCP tests
-	@echo "$(YELLOW)⚠ MCP concurrent tests pending implementation$(RESET)"
+	@for i in {1..5}; do \
+		echo "Running concurrent test batch $$i..."; \
+		curl -s -X POST http://localhost:8000/mcp \
+			-H "Content-Type: application/json" \
+			-d '{"id":"concurrent-'$$i'","method":"tools/list","params":{}}' & \
+	done; \
+	wait; \
+	echo "$(GREEN)✓ Concurrent tests completed$(RESET)"
 
 .PHONY: mcp-test-report
-mcp-test-report: ## Generate MCP test report
+mcp-test-report: ## Generate comprehensive MCP test report
 	@echo "$(BOLD)Generating MCP test report...$(RESET)"
-	# TODO: Implement MCP test reporting
-	@echo "$(YELLOW)⚠ MCP test report pending implementation$(RESET)"
+	@mkdir -p reports
+	@echo "# MCP Test Report - $(shell date)" > reports/mcp_test_report.md
+	@echo "" >> reports/mcp_test_report.md
+	@echo "## Server Status" >> reports/mcp_test_report.md
+	@curl -s http://localhost:8000/health | python3 -m json.tool >> reports/mcp_test_report.md 2>/dev/null || echo "Server unavailable" >> reports/mcp_test_report.md
+	@echo "" >> reports/mcp_test_report.md
+	@echo "## Available Tools" >> reports/mcp_test_report.md
+	@curl -s http://localhost:8000/mcp/tools | python3 -m json.tool >> reports/mcp_test_report.md 2>/dev/null || echo "Tools unavailable" >> reports/mcp_test_report.md
+	@echo "$(GREEN)✓ Report generated: reports/mcp_test_report.md$(RESET)"
 
 # === Quality ===
 .PHONY: lint

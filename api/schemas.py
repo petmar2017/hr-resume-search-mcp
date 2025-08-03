@@ -369,3 +369,52 @@ class ErrorResponse(BaseModel):
     error_code: str
     details: Optional[List[ErrorDetail]] = None
     timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+
+# Project Management Schemas
+class ProjectCreate(BaseModel):
+    """Project creation schema"""
+    name: str = Field(..., min_length=1, max_length=100)
+    slug: str = Field(..., min_length=1, max_length=50)
+    description: Optional[str] = Field(None, max_length=500)
+
+
+class ProjectResponse(BaseModel):
+    """Project response schema"""
+    id: int
+    name: str
+    slug: str
+    description: Optional[str] = None
+    owner_id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
+# Endpoint Management Schemas
+class EndpointCreate(BaseModel):
+    """Endpoint creation schema"""
+    path: str = Field(..., min_length=1)
+    method: str = Field(..., pattern="^(GET|POST|PUT|DELETE|PATCH|OPTIONS|HEAD)$")
+    name: str = Field(..., min_length=1, max_length=100)
+    description: Optional[str] = Field(None, max_length=500)
+    project_id: Optional[int] = None
+    auth_required: bool = False
+    rate_limit: Optional[int] = Field(None, ge=1, le=10000)
+
+
+class EndpointResponse(BaseModel):
+    """Endpoint response schema"""
+    id: int
+    path: str
+    method: str
+    name: str
+    description: Optional[str] = None
+    project_id: Optional[int] = None
+    auth_required: bool
+    rate_limit: Optional[int] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    model_config = ConfigDict(from_attributes=True)

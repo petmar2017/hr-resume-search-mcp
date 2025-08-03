@@ -21,7 +21,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 # Import routers
-from .routers import auth, search, resumes
+from .routers import auth, search, resumes, projects, endpoints
 from .database import init_db, check_db_connection
 from .config import settings
 
@@ -282,6 +282,8 @@ async def general_exception_handler(request: Request, exc: Exception):
 app.include_router(auth.router)
 app.include_router(search.router)
 app.include_router(resumes.router)
+app.include_router(projects.router)
+app.include_router(endpoints.router)
 
 
 @app.get("/", tags=["Root"])

@@ -29,6 +29,150 @@ router = APIRouter(
 )
 
 
+@router.get("/skills")
+async def search_by_skills(
+    skills: str = Query(..., description="Comma-separated list of skills"),
+    min_score: float = Query(0.3, description="Minimum match score"),
+    limit: int = Query(50, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Search candidates by skills"""
+    try:
+        skills_list = [skill.strip() for skill in skills.split(",")]
+        
+        # Import search service
+        from ..services.search_service import SearchService
+        search_service = SearchService()
+        
+        results = await search_service.search_by_skills(
+            skills_list, min_score, limit, offset
+        )
+        
+        return {
+            "success": True,
+            "results": results,
+            "total_results": len(results),
+            "query": skills,
+            "processing_time_ms": 100  # Placeholder
+        }
+    except Exception as e:
+        logger.error(f"Skills search failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/department")
+async def search_by_department(
+    department: str = Query(..., description="Department name"),
+    seniority: Optional[str] = Query(None, description="Seniority level"),
+    limit: int = Query(50, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Search candidates by department"""
+    try:
+        from ..services.search_service import SearchService
+        search_service = SearchService()
+        
+        results = await search_service.search_by_department(
+            department, seniority, limit
+        )
+        
+        return {
+            "success": True,
+            "results": results,
+            "total_results": len(results),
+            "query": department,
+            "processing_time_ms": 100
+        }
+    except Exception as e:
+        logger.error(f"Department search failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/colleagues")
+async def search_colleagues(
+    candidate_id: int = Query(..., description="Base candidate ID"),
+    include_potential: bool = Query(True, description="Include potential colleagues"),
+    min_overlap_months: int = Query(3, description="Minimum overlap in months"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Find colleagues of a candidate"""
+    try:
+        from ..services.search_service import SearchService
+        search_service = SearchService()
+        
+        results = await search_service.search_colleagues(
+            candidate_id, include_potential, min_overlap_months
+        )
+        
+        return {
+            "success": True,
+            "results": results,
+            "total_results": len(results),
+            "processing_time_ms": 100
+        }
+    except Exception as e:
+        logger.error(f"Colleagues search failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/similar/{candidate_id}")
+async def search_similar_candidates(
+    candidate_id: int,
+    limit: int = Query(10, le=50),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Find similar candidates"""
+    try:
+        from ..services.search_service import SearchService
+        search_service = SearchService()
+        
+        results = await search_service.search_similar_candidates(
+            candidate_id, limit
+        )
+        
+        return {
+            "success": True,
+            "results": results,
+            "total_results": len(results),
+            "processing_time_ms": 100
+        }
+    except Exception as e:
+        logger.error(f"Similar candidates search failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/smart")
+async def smart_search_with_claude(
+    query: str,
+    max_results: int = 20,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Smart search using Claude AI to interpret natural language queries"""
+    try:
+        from ..services.search_service import SearchService
+        search_service = SearchService()
+        
+        results = await search_service.smart_search(query, max_results)
+        
+        return {
+            "success": True,
+            "results": results.get("results", []),
+            "total_results": results.get("total_results", 0),
+            "interpretation": results.get("interpretation", {}),
+            "sql_query": results.get("sql_query", ""),
+            "processing_time_ms": 150
+        }
+    except Exception as e:
+        logger.error(f"Smart search failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 class SearchService:
     """
     Service class for handling search operations
