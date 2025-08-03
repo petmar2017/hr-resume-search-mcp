@@ -1,0 +1,756 @@
+{
+  "info": {
+    "name": "HR Resume Search API",
+    "description": "Comprehensive API collection for HR Resume Search system with MCP integration",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "candidate_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "resume_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('access_token', response.access_token);",
+                  "    pm.test('Login successful', function () {",
+                  "        pm.expect(response.access_token).to.be.a('string');",
+                  "    });",
+                  "} else {",
+                  "    pm.test('Login failed', function () {",
+                  "        pm.expect.fail('Login request failed');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"hr@company.com\",\n  \"password\": \"secure_password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "Authenticate user and obtain access token"
+          }
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "me"]
+            },
+            "description": "Get current authenticated user information"
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "refresh"]
+            },
+            "description": "Refresh access token using refresh token"
+          }
+        }
+      ],
+      "description": "Authentication endpoints for user login and token management"
+    },
+    {
+      "name": "Search",
+      "item": [
+        {
+          "name": "Search Candidates",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.test('Search successful', function () {",
+                  "        pm.expect(response.total_results).to.be.a('number');",
+                  "        pm.expect(response.results).to.be.an('array');",
+                  "    });",
+                  "    if (response.results.length > 0) {",
+                  "        pm.collectionVariables.set('candidate_id', response.results[0].candidate_id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"search_type\": \"skills_match\",\n  \"skills\": [\"Python\", \"FastAPI\", \"PostgreSQL\"],\n  \"min_experience_years\": 3,\n  \"max_experience_years\": 10,\n  \"companies\": [\"Google\", \"Meta\", \"Amazon\"],\n  \"departments\": [\"Engineering\", \"Data Science\"],\n  \"locations\": [\"San Francisco\", \"Remote\"],\n  \"education_level\": \"bachelors\",\n  \"query\": \"Senior Python developer\",\n  \"limit\": 10,\n  \"offset\": 0\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/search/candidates",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "search", "candidates"]
+            },
+            "description": "Search for candidates with multiple criteria and filters"
+          }
+        },
+        {
+          "name": "Skills Search",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/search/skills?skills=Python,JavaScript,React&min_score=0.7&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "search", "skills"],
+              "query": [
+                {
+                  "key": "skills",
+                  "value": "Python,JavaScript,React",
+                  "description": "Comma-separated list of skills"
+                },
+                {
+                  "key": "min_score",
+                  "value": "0.7",
+                  "description": "Minimum match score (0.0-1.0)"
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Maximum number of results"
+                }
+              ]
+            },
+            "description": "Search candidates by specific skills"
+          }
+        },
+        {
+          "name": "Department Search",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/search/department?department=Engineering&seniority=Senior&limit=15",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "search", "department"],
+              "query": [
+                {
+                  "key": "department",
+                  "value": "Engineering",
+                  "description": "Department name"
+                },
+                {
+                  "key": "seniority",
+                  "value": "Senior",
+                  "description": "Seniority level"
+                },
+                {
+                  "key": "limit",
+                  "value": "15",
+                  "description": "Maximum results"
+                }
+              ]
+            },
+            "description": "Search candidates by department and seniority"
+          }
+        },
+        {
+          "name": "Find Similar Candidates",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"candidate_id\": \"{{candidate_id}}\",\n  \"limit\": 5\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/search/similar",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "search", "similar"]
+            },
+            "description": "Find candidates similar to a reference candidate"
+          }
+        },
+        {
+          "name": "Find Colleagues",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"candidate_id\": \"{{candidate_id}}\",\n  \"limit\": 10\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/search/colleagues",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "search", "colleagues"]
+            },
+            "description": "Find former colleagues of a candidate"
+          }
+        },
+        {
+          "name": "Smart Natural Language Search",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"Find senior data scientists with machine learning experience who have worked at tech companies\",\n  \"limit\": 10,\n  \"include_reasoning\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/search/smart",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "search", "smart"]
+            },
+            "description": "Natural language search with AI interpretation"
+          }
+        },
+        {
+          "name": "Get Search Filters",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/search/filters",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "search", "filters"]
+            },
+            "description": "Get available search filters (companies, skills, departments, etc.)"
+          }
+        }
+      ],
+      "description": "Candidate search endpoints with various search strategies"
+    },
+    {
+      "name": "Resume Management",
+      "item": [
+        {
+          "name": "Upload Resume",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('resume_id', response.resume_id);",
+                  "    pm.test('Upload successful', function () {",
+                  "        pm.expect(response.resume_id).to.be.a('string');",
+                  "        pm.expect(response.status).to.equal('processing');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "Resume file (PDF, DOC, DOCX)"
+                },
+                {
+                  "key": "candidate_name",
+                  "value": "John Doe",
+                  "type": "text",
+                  "description": "Full name of the candidate"
+                },
+                {
+                  "key": "email",
+                  "value": "john.doe@email.com",
+                  "type": "text",
+                  "description": "Email address"
+                },
+                {
+                  "key": "phone",
+                  "value": "+1-555-0123",
+                  "type": "text",
+                  "description": "Phone number (optional)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/resumes/upload",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "resumes", "upload"]
+            },
+            "description": "Upload a resume file for processing"
+          }
+        },
+        {
+          "name": "Check Resume Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/resumes/{{resume_id}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "resumes", "{{resume_id}}", "status"]
+            },
+            "description": "Check the processing status of an uploaded resume"
+          }
+        },
+        {
+          "name": "Get Resume Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/resumes/{{resume_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "resumes", "{{resume_id}}"]
+            },
+            "description": "Get detailed information about a processed resume"
+          }
+        },
+        {
+          "name": "List Resumes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/resumes?limit=20&offset=0&status=completed",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "resumes"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Maximum number of results"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Pagination offset"
+                },
+                {
+                  "key": "status",
+                  "value": "completed",
+                  "description": "Filter by processing status"
+                }
+              ]
+            },
+            "description": "List all resumes with optional filtering"
+          }
+        }
+      ],
+      "description": "Resume upload and management endpoints"
+    },
+    {
+      "name": "Project Management",
+      "item": [
+        {
+          "name": "Create Project",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Mobile App Backend\",\n  \"description\": \"REST API for iOS and Android mobile application\",\n  \"database_type\": \"postgresql\",\n  \"authentication\": true,\n  \"features\": [\"user_management\", \"file_upload\", \"search\", \"analytics\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/projects",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "projects"]
+            },
+            "description": "Create a new API project"
+          }
+        },
+        {
+          "name": "List Projects",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/projects?limit=10&offset=0",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "projects"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "List all projects"
+          }
+        },
+        {
+          "name": "Get Project Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/projects/{{project_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "projects", "{{project_id}}"]
+            },
+            "description": "Get detailed information about a project"
+          }
+        },
+        {
+          "name": "Update Project",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Mobile App Backend\",\n  \"description\": \"Enhanced REST API with new features\",\n  \"features\": [\"user_management\", \"file_upload\", \"search\", \"analytics\", \"notifications\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/projects/{{project_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "projects", "{{project_id}}"]
+            },
+            "description": "Update an existing project"
+          }
+        }
+      ],
+      "description": "Project management endpoints for API Builder functionality"
+    },
+    {
+      "name": "Endpoint Management",
+      "item": [
+        {
+          "name": "Create Endpoint",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project_id\": \"{{project_id}}\",\n  \"path\": \"/api/v1/users\",\n  \"method\": \"GET\",\n  \"description\": \"Get list of users\",\n  \"request_schema\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"limit\": {\"type\": \"integer\", \"default\": 10},\n      \"offset\": {\"type\": \"integer\", \"default\": 0}\n    }\n  },\n  \"response_schema\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"users\": {\n        \"type\": \"array\",\n        \"items\": {\n          \"type\": \"object\",\n          \"properties\": {\n            \"id\": {\"type\": \"integer\"},\n            \"email\": {\"type\": \"string\"},\n            \"name\": {\"type\": \"string\"}\n          }\n        }\n      },\n      \"total\": {\"type\": \"integer\"}\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/endpoints",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "endpoints"]
+            },
+            "description": "Create a new API endpoint"
+          }
+        },
+        {
+          "name": "List Endpoints",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/endpoints?project_id={{project_id}}&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "endpoints"],
+              "query": [
+                {
+                  "key": "project_id",
+                  "value": "{{project_id}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "List endpoints for a project"
+          }
+        },
+        {
+          "name": "Get Endpoint Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/endpoints/{{endpoint_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "endpoints", "{{endpoint_id}}"]
+            },
+            "description": "Get detailed information about an endpoint"
+          }
+        },
+        {
+          "name": "Update Endpoint",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Get paginated list of users with filtering\",\n  \"request_schema\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"limit\": {\"type\": \"integer\", \"default\": 10, \"maximum\": 100},\n      \"offset\": {\"type\": \"integer\", \"default\": 0},\n      \"search\": {\"type\": \"string\", \"description\": \"Search term\"}\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/endpoints/{{endpoint_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "endpoints", "{{endpoint_id}}"]
+            },
+            "description": "Update an existing endpoint"
+          }
+        }
+      ],
+      "description": "API endpoint management for API Builder"
+    },
+    {
+      "name": "Health & Monitoring",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            },
+            "description": "Basic health check endpoint"
+          }
+        },
+        {
+          "name": "Readiness Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/readiness",
+              "host": ["{{base_url}}"],
+              "path": ["readiness"]
+            },
+            "description": "Comprehensive readiness check with database and service status"
+          }
+        },
+        {
+          "name": "Metrics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/metrics",
+              "host": ["{{base_url}}"],
+              "path": ["metrics"]
+            },
+            "description": "Basic application metrics"
+          }
+        },
+        {
+          "name": "Prometheus Metrics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/prometheus/metrics",
+              "host": ["{{base_url}}"],
+              "path": ["prometheus", "metrics"]
+            },
+            "description": "Prometheus-formatted metrics"
+          }
+        }
+      ],
+      "description": "Health monitoring and metrics endpoints"
+    },
+    {
+      "name": "Error Examples",
+      "item": [
+        {
+          "name": "401 Unauthorized",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/search/filters",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "search", "filters"]
+            },
+            "description": "Example request without authentication to demonstrate 401 error"
+          }
+        },
+        {
+          "name": "404 Not Found",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/resumes/non-existent-id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "resumes", "non-existent-id"]
+            },
+            "description": "Example request for non-existent resource"
+          }
+        },
+        {
+          "name": "422 Validation Error",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"search_type\": \"invalid_type\",\n  \"limit\": -5,\n  \"min_experience_years\": \"not_a_number\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/search/candidates",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "search", "candidates"]
+            },
+            "description": "Example request with validation errors"
+          }
+        }
+      ],
+      "description": "Examples of common error responses"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-refresh token if needed",
+          "const token = pm.collectionVariables.get('access_token');",
+          "if (!token && pm.request.url.path.join('/') !== 'api/v1/auth/login') {",
+          "    console.log('No access token available. Please login first.');",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global response time test",
+          "pm.test('Response time is less than 5000ms', function () {",
+          "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+          "});",
+          "",
+          "// Global status code test for non-error endpoints",
+          "if (!pm.request.url.path.includes('error-examples')) {",
+          "    pm.test('Status code is successful', function () {",
+          "        pm.expect(pm.response.code).to.be.oneOf([200, 201, 202]);",
+          "    });",
+          "}"
+        ]
+      }
+    }
+  ]
+}

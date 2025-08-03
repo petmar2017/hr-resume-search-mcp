@@ -330,53 +330,13 @@ async def search_candidates(
     db: Session = Depends(get_db)
 ) -> SearchResponse:
     """
-    Smart candidate search with multiple criteria with Redis caching
+    Smart candidate search with multiple criteria
     """
     start_time = datetime.utcnow()
     search_metrics = get_search_metrics_collector()
     db_metrics = get_db_metrics_tracker(db)
     
-    # Import cache service
-    from ..services.cache_service import cache_service
-    
-    # Generate cache key from search parameters
-    search_params = {
-        "search_type": search_request.search_type.value,
-        "query": search_request.query,
-        "skills": search_request.skills,
-        "companies": search_request.companies,
-        "departments": search_request.departments,
-        "locations": search_request.locations,
-        "min_experience_years": search_request.min_experience_years,
-        "max_experience_years": search_request.max_experience_years,
-        "education_level": search_request.education_level,
-        "limit": search_request.limit,
-        "offset": search_request.offset
-    }
-    
-    # Check cache first
-    cached_results = cache_service.get_cached_search_results(search_params)
-    if cached_results:
-        search_metrics.record_cache_hit("search")
-        logger.info(f"Cache hit for search: {search_request.search_type.value}")
-        
-        # Convert cached results back to SearchResponse
-        cached_search_results = [
-            SearchResult(**result) for result in cached_results["results"]
-        ]
-        
-        return SearchResponse(
-            query=search_request.query or "",
-            search_type=search_request.search_type,
-            total_results=len(cached_search_results),
-            results=cached_search_results,
-            processing_time_ms=5  # Fast cache response
-        )
-    
-    # Cache miss - record and proceed with database query
-    search_metrics.record_cache_miss("search")
-    
-    # Database query with optimized indexes and caching  
+    # Track search request
     with search_metrics.track_search_request(search_request.search_type.value, "user"):
         try:
             # Build base query with metrics tracking
@@ -388,10 +348,10 @@ async def search_candidates(
                     Resume.parsing_status == "completed"
                 )
             
-            # Apply filters based on search type (optimized with indexes)
+            # Apply filters based on search type
             if search_request.search_type == SearchType.SKILLS_MATCH:
                 if search_request.skills:
-                    # Use optimized GIN index for JSONB skills
+                    # Search for candidates with matching skills
                     skills_filter = []
                     for skill in search_request.skills:
                         skills_filter.append(
@@ -405,7 +365,7 @@ async def search_candidates(
             
             elif search_request.search_type == SearchType.SAME_DEPARTMENT:
                 if search_request.departments:
-                    # Use optimized composite index for company+department
+                    # Join with WorkExperience to search by department
                     query = query.join(
                         WorkExperience, WorkExperience.candidate_id == Candidate.id
                     ).filter(
@@ -413,7 +373,7 @@ async def search_candidates(
                     )
             
             elif search_request.search_type == SearchType.EXPERIENCE_MATCH:
-                # Use optimized index on total_experience_years
+                # Filter by experience years
                 if search_request.min_experience_years:
                     query = query.filter(
                         Candidate.total_experience_years >= search_request.min_experience_years
@@ -423,53 +383,51 @@ async def search_candidates(
                         Candidate.total_experience_years <= search_request.max_experience_years
                     )
             
-            # Apply additional filters with optimized indexes
+            # Apply additional filters
             if search_request.companies:
-                query = query.join(
-                    WorkExperience, WorkExperience.candidate_id == Candidate.id
-                ).filter(
-                    WorkExperience.company.in_(search_request.companies)
+            query = query.join(
+                WorkExperience, WorkExperience.candidate_id == Candidate.id
+            ).filter(
+                WorkExperience.company.in_(search_request.companies)
+            )
+        
+        if search_request.locations:
+            query = query.filter(
+                Candidate.location.in_(search_request.locations)
+            )
+        
+        if search_request.education_level:
+            # Search in education JSON field
+            query = query.filter(
+                func.jsonb_path_exists(
+                    cast(Resume.education, JSONB),
+                    f'$[*] ? (@.level == "{search_request.education_level}")'
                 )
-            
-            if search_request.locations:
-                # Use optimized location index
-                query = query.filter(
-                    Candidate.location.in_(search_request.locations)
+            )
+        
+        # Keyword search in parsed_data
+        if search_request.query:
+            keyword = f"%{search_request.query}%"
+            query = query.filter(
+                or_(
+                    cast(Resume.parsed_data, String).ilike(keyword),
+                    Candidate.full_name.ilike(keyword),
+                    Candidate.headline.ilike(keyword),
+                    Candidate.summary.ilike(keyword)
                 )
-            
-            if search_request.education_level:
-                # Use optimized GIN index for education JSONB
-                query = query.filter(
-                    func.jsonb_path_exists(
-                        cast(Resume.education, JSONB),
-                        f'$[*] ? (@.level == "{search_request.education_level}")'
-                    )
-                )
-            
-            # Keyword search in parsed_data
-            if search_request.query:
-                keyword = f"%{search_request.query}%"
-                query = query.filter(
-                    or_(
-                        cast(Resume.parsed_data, String).ilike(keyword),
-                        Candidate.full_name.ilike(keyword),
-                        Candidate.headline.ilike(keyword),
-                        Candidate.summary.ilike(keyword)
-                    )
-                )
-            
-            # Get total count before pagination
-            with db_metrics.track_query("COUNT", "search_count"):
-                total_results = query.count()
-            
-            # Apply pagination
-            query = query.offset(search_request.offset).limit(search_request.limit)
-            
+            )
+        
+        # Get total count before pagination
+        total_results = query.count()
+        
+        # Apply pagination
+        query = query.offset(search_request.offset).limit(search_request.limit)
+        
             # Execute query with metrics tracking
             with db_metrics.track_query("EXECUTE", "search_query"):
                 results = query.all()
             
-            # Build response with match scoring
+            # Build response
             search_results = []
             match_scores = []
             for candidate, resume in results:
@@ -485,42 +443,42 @@ async def search_candidates(
                     }
                 )
                 match_scores.append(match_score)
-                
-                # Build match reasons
-                match_reasons = []
-                if search_request.skills:
-                    matching_skills = set(search_request.skills).intersection(set(resume.skills or []))
-                    if matching_skills:
-                        match_reasons.append(f"Skills: {', '.join(matching_skills)}")
-                
-                if search_request.companies:
-                    for exp in candidate.work_experiences:
-                        if exp.company in search_request.companies:
-                            match_reasons.append(f"Worked at {exp.company}")
-                            break
-                
-                if search_request.departments:
-                    for exp in candidate.work_experiences:
-                        if exp.department in search_request.departments:
-                            match_reasons.append(f"Worked in {exp.department}")
-                            break
-                
-                search_results.append(SearchResult(
-                    candidate_id=candidate.uuid,
-                    resume_id=resume.uuid,
-                    full_name=candidate.full_name,
-                    current_position=candidate.current_position,
-                    current_company=candidate.current_company,
-                    total_experience_years=candidate.total_experience_years,
-                    match_score=match_score,
-                    match_reasons=match_reasons,
-                    highlights={
-                        "skills": resume.skills[:5] if resume.skills else [],
-                        "location": candidate.location,
-                        "headline": candidate.headline
-                    }
-                ))
             
+            # Build match reasons
+            match_reasons = []
+            if search_request.skills:
+                matching_skills = set(search_request.skills).intersection(set(resume.skills or []))
+                if matching_skills:
+                    match_reasons.append(f"Skills: {', '.join(matching_skills)}")
+            
+            if search_request.companies:
+                for exp in candidate.work_experiences:
+                    if exp.company in search_request.companies:
+                        match_reasons.append(f"Worked at {exp.company}")
+                        break
+            
+            if search_request.departments:
+                for exp in candidate.work_experiences:
+                    if exp.department in search_request.departments:
+                        match_reasons.append(f"Worked in {exp.department}")
+                        break
+            
+            search_results.append(SearchResult(
+                candidate_id=candidate.uuid,
+                resume_id=resume.uuid,
+                full_name=candidate.full_name,
+                current_position=candidate.current_position,
+                current_company=candidate.current_company,
+                total_experience_years=candidate.total_experience_years,
+                match_score=match_score,
+                match_reasons=match_reasons,
+                highlights={
+                    "skills": resume.skills[:5] if resume.skills else [],
+                    "location": candidate.location,
+                    "headline": candidate.headline
+                }
+            ))
+        
             # Sort by match score
             search_results.sort(key=lambda x: x.match_score, reverse=True)
             
@@ -531,14 +489,9 @@ async def search_candidates(
                 match_scores
             )
             
-            # Calculate processing time
+            # Log search history with metrics tracking
             processing_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
             
-            # Cache the results for future requests (5 minute TTL)
-            cache_data = [result.model_dump() for result in search_results]
-            cache_service.cache_search_results(search_params, cache_data, ttl=300)
-            
-            # Log search history with metrics tracking
             with db_metrics.track_query("INSERT", "search_history"):
                 search_history = SearchHistory(
                     query=search_request.query or "",
@@ -552,8 +505,6 @@ async def search_candidates(
                 db.add(search_history)
                 db.commit()
             
-            logger.info(f"Search completed: {processing_time}ms, {total_results} results, cache stored")
-            
             return SearchResponse(
                 query=search_request.query or "",
                 search_type=search_request.search_type,
@@ -562,12 +513,12 @@ async def search_candidates(
                 processing_time_ms=processing_time
             )
         
-        except Exception as e:
-            logger.error(f"Search error: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Search failed: {str(e)}"
-            )
+    except Exception as e:
+        logger.error(f"Search error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Search failed: {str(e)}"
+        )
 
 
 @router.post("/similar", response_model=SearchResponse)

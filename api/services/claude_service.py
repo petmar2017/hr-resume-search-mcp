@@ -75,7 +75,9 @@ class ClaudeService:
     
     def _create_parsing_prompt(self, resume_text: str) -> str:
         """Create the prompt for Claude to parse the resume."""
-        return f"""You are an expert resume parser. Extract structured information from the following resume text and return it as a valid JSON object.
+        return f"""You are an expert resume parser. Extract structured information from the following resume text and return it as a valid JSON format.
+
+Extract the following sections: personal_info, experience, education, skills.
 
 The JSON should have this structure:
 {{
