@@ -229,6 +229,16 @@ class ResumeData(BaseModel):
     salary_expectations: Optional[Dict[str, Any]] = None
 
 
+class ResumeCreate(BaseModel):
+    """Resume creation schema"""
+    candidate_id: int
+    file_name: str
+    file_type: FileType
+    file_size: Optional[int] = None
+    tags: Optional[List[str]] = None
+    notes: Optional[str] = None
+
+
 class ResumeUploadRequest(BaseModel):
     """Resume upload request schema"""
     file_name: str

@@ -13,7 +13,7 @@ class ClaudeService:
     
     def __init__(self):
         """Initialize Claude client."""
-        self.api_key = settings.CLAUDE_API_KEY or os.getenv("CLAUDE_API_KEY")
+        self.api_key = settings.claude_api_key or os.getenv("CLAUDE_API_KEY")
         if not self.api_key:
             raise ValueError("Claude API key not configured. Set CLAUDE_API_KEY in environment.")
         

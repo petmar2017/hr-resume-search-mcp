@@ -300,3 +300,24 @@ async def get_current_user_or_api_key(
         detail="Authentication required",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+
+# Standalone functions for compatibility
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a plain password against a hashed password"""
+    return AuthService.verify_password(plain_password, hashed_password)
+
+
+def get_password_hash(password: str) -> str:
+    """Hash a password for storing"""
+    return AuthService.hash_password(password)
+
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    """Create a JWT access token"""
+    return AuthService.create_access_token(data, expires_delta)
+
+
+def verify_token(token: str) -> dict:
+    """Decode and validate a JWT token"""
+    return AuthService.decode_token(token)

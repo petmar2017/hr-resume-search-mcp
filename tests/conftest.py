@@ -2,15 +2,23 @@
 Pytest Configuration and Shared Fixtures
 """
 
-import pytest
-import asyncio
-from typing import AsyncGenerator, Generator
-from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlalchemy.pool import NullPool
 import os
 from pathlib import Path
 import sys
+
+# Override settings for testing BEFORE importing anything
+os.environ["ENVIRONMENT"] = "testing"
+os.environ["DATABASE_URL"] = "sqlite:///test.db"
+os.environ["REDIS_URL"] = "redis://localhost:6379/1" 
+os.environ["JWT_SECRET_KEY"] = "test-secret-key-for-testing-only"
+
+import pytest
+import asyncio
+from typing import Generator
+from httpx import AsyncClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -19,62 +27,50 @@ from api.main import app
 from api.database import Base, get_db
 from api.config import get_settings
 
-# Override settings for testing
-os.environ["ENVIRONMENT"] = "testing"
-os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///test.db"
-os.environ["REDIS_URL"] = "redis://localhost:6379/1" 
-os.environ["JWT_SECRET_KEY"] = "test-secret-key-for-testing-only"
-
 
 @pytest.fixture(scope="session")
-def event_loop():
-    """Create an instance of the default event loop for the test session."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
-
-
-@pytest.fixture(scope="session")
-async def test_engine():
+def test_engine():
     """Create test database engine"""
-    engine = create_async_engine(
-        os.environ["DATABASE_URL"],
-        poolclass=NullPool,  # Disable connection pooling for tests
+    engine = create_engine(
+        "sqlite:///:memory:",
+        poolclass=StaticPool,
+        connect_args={
+            "check_same_thread": False,
+        },
         echo=False
     )
     
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-        await conn.run_sync(Base.metadata.create_all)
-    
+    Base.metadata.create_all(bind=engine)
     yield engine
-    
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-    
-    await engine.dispose()
+    Base.metadata.drop_all(bind=engine)
 
 
 @pytest.fixture
-async def db_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
+def db_session(test_engine):
     """Create a test database session"""
-    async_session = async_sessionmaker(
-        test_engine,
-        class_=AsyncSession,
-        expire_on_commit=False
+    TestingSessionLocal = sessionmaker(
+        autocommit=False,
+        autoflush=False,
+        bind=test_engine
     )
     
-    async with async_session() as session:
+    session = TestingSessionLocal()
+    try:
         yield session
-        await session.rollback()
+    finally:
+        session.rollback()
+        session.close()
 
 
 @pytest.fixture
-async def client(db_session) -> AsyncGenerator[AsyncClient, None]:
+async def client(db_session) -> AsyncClient:
     """Create test client with database override"""
     
-    async def override_get_db():
-        yield db_session
+    def override_get_db():
+        try:
+            yield db_session
+        finally:
+            pass
     
     app.dependency_overrides[get_db] = override_get_db
     

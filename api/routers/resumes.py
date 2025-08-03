@@ -31,7 +31,7 @@ file_service = FileService()
 # Configure upload settings
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 ALLOWED_EXTENSIONS = {".pdf", ".doc", ".docx"}
-UPLOAD_DIR = Path(settings.UPLOAD_DIR or "uploads")
+UPLOAD_DIR = Path(settings.upload_dir or "uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
 
