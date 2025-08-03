@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "hr-resume-search": {
+      "command": "python",
+      "args": [
+        "-m",
+        "mcp_server.server"
+      ],
+      "env": {
+        "PYTHONPATH": "/Users/petermager/Downloads/code/Tmux-Orchestrator/api_builder/workspace",
+        "LOG_LEVEL": "INFO",
+        "DATABASE_URL": "postgresql://user:password@localhost:5432/hr_resumes",
+        "REDIS_URL": "redis://localhost:6379",
+        "CLAUDE_API_KEY": "${CLAUDE_API_KEY}"
+      }
+    }
+  }
+}
