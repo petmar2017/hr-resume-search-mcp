@@ -9,48 +9,68 @@ import asyncio
 from httpx import AsyncClient
 from unittest.mock import patch, MagicMock
 
+from tests.factories import UserFactory, CandidateFactory, ResumeFactory
+
 
 class TestResumeManagement:
     """Test suite for resume upload, parsing, and search functionality"""
     
     @pytest.mark.asyncio
-    async def test_resume_upload_pdf(self, authenticated_client: AsyncClient, sample_resume_pdf):
-        """Test uploading a PDF resume"""
-        # Create file upload
-        files = {
-            "file": ("resume.pdf", sample_resume_pdf, "application/pdf")
-        }
+    async def test_resume_upload_pdf(self, authenticated_client: AsyncClient, sample_resume_pdf, mock_claude_response):
+        """Test uploading a PDF resume - Complete E2E Flow"""
         
-        # TODO: Implement resume upload endpoint in api/main.py
-        # response = await authenticated_client.post(
-        #     "/api/v1/resumes/upload",
-        #     files=files
-        # )
-        # 
-        # assert response.status_code == 201
-        # data = response.json()
-        # assert "id" in data
-        # assert "filename" in data
-        # assert data["filename"] == "resume.pdf"
-        # assert "parsed_data" in data
-        # assert data["status"] == "processed"
+        with patch('api.services.file_service.FileService.extract_text_from_pdf') as mock_extract:
+            with patch('api.services.claude_service.ClaudeService.parse_resume') as mock_parse:
+                mock_extract.return_value = "Sample extracted PDF text"
+                mock_parse.return_value = mock_claude_response
+                
+                files = {
+                    "file": ("resume.pdf", sample_resume_pdf, "application/pdf")
+                }
+                
+                response = await authenticated_client.post(
+                    "/api/v1/resumes/upload",
+                    files=files
+                )
+                
+                assert response.status_code == 201
+                data = response.json()
+                assert "id" in data
+                assert "filename" in data
+                assert data["filename"] == "resume.pdf"
+                assert "parsed_data" in data
+                assert data["status"] == "completed"
+                
+                # Verify complete parsed structure
+                parsed = data["parsed_data"]
+                assert "personal_info" in parsed
+                assert "experience" in parsed
+                assert "skills" in parsed
+                assert parsed["personal_info"]["name"] == "John Doe"
     
     @pytest.mark.asyncio
-    async def test_resume_upload_docx(self, authenticated_client: AsyncClient, sample_resume_docx):
-        """Test uploading a DOCX resume"""
-        files = {
-            "file": ("resume.docx", sample_resume_docx, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-        }
+    async def test_resume_upload_docx(self, authenticated_client: AsyncClient, sample_resume_docx, mock_claude_response):
+        """Test uploading a DOCX resume - Complete E2E Flow"""
         
-        # TODO: Implement resume upload endpoint
-        # response = await authenticated_client.post(
-        #     "/api/v1/resumes/upload",
-        #     files=files
-        # )
-        # 
-        # assert response.status_code == 201
-        # data = response.json()
-        # assert data["filename"] == "resume.docx"
+        with patch('api.services.file_service.FileService.extract_text_from_docx') as mock_extract:
+            with patch('api.services.claude_service.ClaudeService.parse_resume') as mock_parse:
+                mock_extract.return_value = "Sample extracted DOCX text"
+                mock_parse.return_value = mock_claude_response
+                
+                files = {
+                    "file": ("resume.docx", sample_resume_docx, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+                }
+                
+                response = await authenticated_client.post(
+                    "/api/v1/resumes/upload",
+                    files=files
+                )
+                
+                assert response.status_code == 201
+                data = response.json()
+                assert data["filename"] == "resume.docx"
+                assert data["status"] == "completed"
+                assert "candidate_id" in data
     
     @pytest.mark.asyncio
     async def test_resume_parsing_with_claude(self, authenticated_client: AsyncClient, mock_claude_response):
@@ -81,28 +101,49 @@ class TestResumeManagement:
             # assert "colleagues" in parsed
     
     @pytest.mark.asyncio
-    async def test_search_similar_candidates(self, authenticated_client: AsyncClient):
-        """Test searching for similar candidates"""
-        # TODO: First upload some test resumes
-        # Then implement search functionality
+    async def test_search_similar_candidates(self, authenticated_client: AsyncClient, db_session):
+        """Test searching for similar candidates - Complete E2E Flow"""
         
-        search_params = {
-            "skills": ["Python", "FastAPI"],
-            "experience_years": 5,
-            "department": "Engineering"
-        }
+        # Create test candidates with resumes
+        hr_user = UserFactory(email="hr@test.com")
         
-        # TODO: Implement search endpoint
-        # response = await authenticated_client.get(
-        #     "/api/v1/resumes/search",
-        #     params=search_params
-        # )
-        # 
-        # assert response.status_code == 200
-        # data = response.json()
-        # assert "results" in data
-        # assert "total" in data
-        # assert isinstance(data["results"], list)
+        candidate1 = CandidateFactory(full_name="Alice Python", email="alice@test.com")
+        candidate2 = CandidateFactory(full_name="Bob JavaScript", email="bob@test.com")
+        
+        resume1 = ResumeFactory(
+            candidate_id=candidate1,
+            uploaded_by_id=hr_user,
+            skills=["Python", "FastAPI", "PostgreSQL"],
+            parsing_status="completed"
+        )
+        
+        resume2 = ResumeFactory(
+            candidate_id=candidate2, 
+            uploaded_by_id=hr_user,
+            skills=["JavaScript", "React", "Node.js"],
+            parsing_status="completed"
+        )
+        
+        db_session.add_all([hr_user, candidate1, candidate2, resume1, resume2])
+        await db_session.commit()
+        
+        # Test skills-based search
+        response = await authenticated_client.get(
+            "/api/v1/search/skills",
+            params={"skills": "Python,FastAPI", "min_score": 0.5}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "results" in data
+        assert data["total"] >= 1
+        
+        # Should find Alice (Python developer)
+        found_alice = any(
+            result["candidate"]["full_name"] == "Alice Python" 
+            for result in data["results"]
+        )
+        assert found_alice
     
     @pytest.mark.asyncio
     async def test_search_same_department(self, authenticated_client: AsyncClient):
