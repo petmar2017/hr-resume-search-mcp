@@ -385,10 +385,50 @@ metrics: ## Show application metrics
 	@echo "$(BOLD)Application Metrics:$(RESET)"
 	@curl -s http://localhost:8000/metrics 2>/dev/null || echo "Metrics endpoint not available"
 
+.PHONY: metrics-summary
+metrics-summary: ## Show human-readable metrics summary
+	@echo "$(BOLD)Metrics Summary:$(RESET)"
+	@curl -s http://localhost:8000/metrics/summary | python -m json.tool 2>/dev/null || echo "Metrics summary not available"
+
 .PHONY: health
 health: ## Check application health
 	@echo "$(BOLD)Health Check:$(RESET)"
 	@curl -s http://localhost:8000/health | python -m json.tool 2>/dev/null || echo "Health endpoint not available"
+
+.PHONY: monitoring-start
+monitoring-start: ## Start monitoring stack (Prometheus + Grafana)
+	@echo "$(BOLD)Starting monitoring stack...$(RESET)"
+	cd monitoring && docker-compose -f docker-compose.monitoring.yml up -d
+	@echo "$(GREEN)✓ Monitoring stack started$(RESET)"
+	@echo "$(CYAN)Grafana: http://localhost:3000 (admin/admin_change_me)$(RESET)"
+	@echo "$(CYAN)Prometheus: http://localhost:9090$(RESET)"
+
+.PHONY: monitoring-stop
+monitoring-stop: ## Stop monitoring stack
+	@echo "$(BOLD)Stopping monitoring stack...$(RESET)"
+	cd monitoring && docker-compose -f docker-compose.monitoring.yml down
+	@echo "$(GREEN)✓ Monitoring stack stopped$(RESET)"
+
+.PHONY: monitoring-logs
+monitoring-logs: ## Show monitoring stack logs
+	@echo "$(BOLD)Monitoring Stack Logs:$(RESET)"
+	cd monitoring && docker-compose -f docker-compose.monitoring.yml logs -f
+
+.PHONY: monitoring-status
+monitoring-status: ## Check monitoring stack status
+	@echo "$(BOLD)Monitoring Stack Status:$(RESET)"
+	cd monitoring && docker-compose -f docker-compose.monitoring.yml ps
+
+.PHONY: performance-test
+performance-test: ## Run performance validation tests
+	@echo "$(BOLD)Running performance tests...$(RESET)"
+	@echo "$(YELLOW)Testing API response times...$(RESET)"
+	@for i in {1..10}; do \
+		echo "Request $$i:"; \
+		curl -w "Response time: %{time_total}s\n" -s -o /dev/null http://localhost:8000/health; \
+	done
+	@echo "$(GREEN)✓ Performance test completed$(RESET)"
+	@echo "$(CYAN)Check Grafana dashboard for detailed metrics$(RESET)"
 
 # === Default ===
 .DEFAULT_GOAL := help

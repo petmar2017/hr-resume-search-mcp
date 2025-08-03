@@ -20,6 +20,7 @@ from ..schemas import (
 )
 from ..models import User, Candidate, Resume, WorkExperience, SearchHistory
 from ..config import settings
+from ..middleware.metrics_middleware import get_search_metrics_collector, get_db_metrics_tracker
 
 logger = logging.getLogger(__name__)
 
@@ -332,15 +333,20 @@ async def search_candidates(
     Smart candidate search with multiple criteria
     """
     start_time = datetime.utcnow()
+    search_metrics = get_search_metrics_collector()
+    db_metrics = get_db_metrics_tracker(db)
     
-    try:
-        # Build base query
-        query = db.query(Candidate, Resume).join(
-            Resume, Resume.candidate_id == Candidate.id
-        ).filter(
-            Candidate.is_active == True,
-            Resume.parsing_status == "completed"
-        )
+    # Track search request
+    with search_metrics.track_search_request(search_request.search_type.value, "user"):
+        try:
+            # Build base query with metrics tracking
+            with db_metrics.track_query("SELECT", "candidates_resumes"):
+                query = db.query(Candidate, Resume).join(
+                    Resume, Resume.candidate_id == Candidate.id
+                ).filter(
+                    Candidate.is_active == True,
+                    Resume.parsing_status == "completed"
+                )
         
         # Apply filters based on search type
         if search_request.search_type == SearchType.SKILLS_MATCH:
@@ -417,23 +423,26 @@ async def search_candidates(
         # Apply pagination
         query = query.offset(search_request.offset).limit(search_request.limit)
         
-        # Execute query
-        results = query.all()
-        
-        # Build response
-        search_results = []
-        for candidate, resume in results:
-            # Calculate match score
-            match_score = SearchService.calculate_match_score(
-                candidate, 
-                resume,
-                {
-                    "skills": search_request.skills,
-                    "min_experience_years": search_request.min_experience_years,
-                    "companies": search_request.companies,
-                    "departments": search_request.departments
-                }
-            )
+            # Execute query with metrics tracking
+            with db_metrics.track_query("EXECUTE", "search_query"):
+                results = query.all()
+            
+            # Build response
+            search_results = []
+            match_scores = []
+            for candidate, resume in results:
+                # Calculate match score
+                match_score = SearchService.calculate_match_score(
+                    candidate, 
+                    resume,
+                    {
+                        "skills": search_request.skills,
+                        "min_experience_years": search_request.min_experience_years,
+                        "companies": search_request.companies,
+                        "departments": search_request.departments
+                    }
+                )
+                match_scores.append(match_score)
             
             # Build match reasons
             match_reasons = []
@@ -470,31 +479,39 @@ async def search_candidates(
                 }
             ))
         
-        # Sort by match score
-        search_results.sort(key=lambda x: x.match_score, reverse=True)
-        
-        # Log search history
-        processing_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
-        
-        search_history = SearchHistory(
-            query=search_request.query or "",
-            search_type=search_request.search_type.value,
-            filters=search_request.model_dump(exclude={"query", "search_type"}),
-            results_count=total_results,
-            results=[r.model_dump() for r in search_results[:5]],  # Store top 5 results
-            processing_time_ms=processing_time,
-            user_id=current_user.id
-        )
-        db.add(search_history)
-        db.commit()
-        
-        return SearchResponse(
-            query=search_request.query or "",
-            search_type=search_request.search_type,
-            total_results=total_results,
-            results=search_results,
-            processing_time_ms=processing_time
-        )
+            # Sort by match score
+            search_results.sort(key=lambda x: x.match_score, reverse=True)
+            
+            # Record search metrics
+            search_metrics.record_search_results(
+                search_request.search_type.value, 
+                search_results, 
+                match_scores
+            )
+            
+            # Log search history with metrics tracking
+            processing_time = int((datetime.utcnow() - start_time).total_seconds() * 1000)
+            
+            with db_metrics.track_query("INSERT", "search_history"):
+                search_history = SearchHistory(
+                    query=search_request.query or "",
+                    search_type=search_request.search_type.value,
+                    filters=search_request.model_dump(exclude={"query", "search_type"}),
+                    results_count=total_results,
+                    results=[r.model_dump() for r in search_results[:5]],  # Store top 5 results
+                    processing_time_ms=processing_time,
+                    user_id=current_user.id
+                )
+                db.add(search_history)
+                db.commit()
+            
+            return SearchResponse(
+                query=search_request.query or "",
+                search_type=search_request.search_type,
+                total_results=total_results,
+                results=search_results,
+                processing_time_ms=processing_time
+            )
         
     except Exception as e:
         logger.error(f"Search error: {e}")

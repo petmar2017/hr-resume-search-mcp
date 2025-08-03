@@ -331,3 +331,182 @@ Return only the JSON object."""
         network["companies"] = list(network["companies"])
         
         return network
+    
+    # Additional methods expected by tests
+    async def interpret_search_query(self, query: str) -> Dict[str, Any]:
+        """
+        Interpret natural language search queries using Claude AI.
+        
+        Args:
+            query: Natural language search query
+            
+        Returns:
+            Structured search criteria
+        """
+        prompt = f"""You are an expert HR search assistant. Convert this natural language search query into structured search criteria:
+
+Query: "{query}"
+
+Return a JSON object with the following structure:
+{{
+    "skills": ["list of technical skills mentioned"],
+    "experience_years": {{
+        "min": minimum_years_or_null,
+        "max": maximum_years_or_null
+    }},
+    "companies": ["specific companies mentioned"],
+    "departments": ["departments or divisions mentioned"],
+    "positions": ["job titles or roles mentioned"],
+    "education": ["education requirements mentioned"],
+    "locations": ["locations mentioned"],
+    "keywords": ["other relevant search terms"]
+}}
+
+Extract only what is explicitly mentioned in the query. Use null for unspecified criteria."""
+
+        try:
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=1000,
+                temperature=0.2,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ]
+            )
+            
+            response_text = response.content[0].text
+            
+            # Try to find JSON in the response
+            json_start = response_text.find("{")
+            json_end = response_text.rfind("}") + 1
+            
+            if json_start >= 0 and json_end > json_start:
+                json_str = response_text[json_start:json_end]
+                return json.loads(json_str)
+            else:
+                # Fallback: return basic structure
+                return {
+                    "skills": [],
+                    "experience_years": {"min": None, "max": None},
+                    "companies": [],
+                    "departments": [],
+                    "positions": [],
+                    "education": [],
+                    "locations": [],
+                    "keywords": [query]
+                }
+                
+        except Exception as e:
+            print(f"Error interpreting search query: {e}")
+            # Return basic structure with original query as keyword
+            return {
+                "skills": [],
+                "experience_years": {"min": None, "max": None},
+                "companies": [],
+                "departments": [],
+                "positions": [],
+                "education": [],
+                "locations": [],
+                "keywords": [query]
+            }
+    
+    async def extract_keywords(self, text: str) -> list:
+        """
+        Extract relevant keywords from text using Claude AI.
+        
+        Args:
+            text: Text to extract keywords from
+            
+        Returns:
+            List of relevant keywords
+        """
+        prompt = f"""Extract relevant professional keywords from this text. Focus on:
+1. Technical skills and technologies
+2. Job titles and roles
+3. Company names and industries
+4. Educational qualifications
+5. Certifications
+6. Tools and software
+7. Domain expertise
+
+Text: "{text[:1000]}"  # Limit text length
+
+Return a JSON array of keywords: ["keyword1", "keyword2", ...]"""
+
+        try:
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=500,
+                temperature=0.1,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ]
+            )
+            
+            response_text = response.content[0].text
+            
+            # Try to find JSON array in the response
+            json_start = response_text.find("[")
+            json_end = response_text.rfind("]") + 1
+            
+            if json_start >= 0 and json_end > json_start:
+                json_str = response_text[json_start:json_end]
+                keywords = json.loads(json_str)
+                return keywords if isinstance(keywords, list) else []
+            else:
+                # Fallback: basic keyword extraction
+                words = text.lower().split()
+                # Filter for common professional keywords
+                professional_words = [word for word in words if len(word) > 3 and word.isalpha()]
+                return professional_words[:10]  # Return top 10
+                
+        except Exception as e:
+            print(f"Error extracting keywords: {e}")
+            # Fallback to simple word extraction
+            words = text.lower().split()
+            return [word for word in words if len(word) > 3 and word.isalpha()][:10]
+    
+    def _build_parsing_prompt(self, text: str) -> str:
+        """
+        Alias for _create_parsing_prompt for test compatibility.
+        
+        Args:
+            text: Resume text to create prompt for
+            
+        Returns:
+            Parsing prompt for Claude
+        """
+        return self._create_parsing_prompt(text)
+    
+    def _validate_parsed_resume(self, data: Dict[str, Any]) -> bool:
+        """
+        Validate parsed resume structure (test compatibility).
+        
+        Args:
+            data: Parsed resume data
+            
+        Returns:
+            True if valid structure, False otherwise
+        """
+        try:
+            # Check for required fields that tests expect
+            required_fields = ["personal_info", "experience", "education", "skills"]
+            
+            # Handle both new and old structure formats
+            if all(field in data for field in required_fields):
+                # Old structure expected by tests
+                return True
+            elif all(field in data for field in ["name", "email", "work_experience", "education", "skills"]):
+                # New structure from implementation
+                return True
+            else:
+                return False
+                
+        except Exception:
+            return False

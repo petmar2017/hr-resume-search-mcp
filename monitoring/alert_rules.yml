@@ -1,0 +1,133 @@
+# Prometheus Alert Rules for HR Resume Search API
+groups:
+  - name: hr_resume_search_alerts
+    rules:
+      # High response time alert
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(api_request_duration_seconds_bucket[5m])) > 0.2
+        for: 2m
+        labels:
+          severity: warning
+          service: hr-resume-search
+        annotations:
+          summary: "High API response time detected"
+          description: "95th percentile response time is {{ $value }}s, which is above the 200ms threshold"
+          runbook_url: "https://docs.example.com/runbooks/high-response-time"
+
+      # Critical response time alert
+      - alert: CriticalResponseTime
+        expr: histogram_quantile(0.95, rate(api_request_duration_seconds_bucket[5m])) > 1.0
+        for: 1m
+        labels:
+          severity: critical
+          service: hr-resume-search
+        annotations:
+          summary: "Critical API response time detected"
+          description: "95th percentile response time is {{ $value }}s, which is critically high"
+          runbook_url: "https://docs.example.com/runbooks/critical-response-time"
+
+      # High error rate alert
+      - alert: HighErrorRate
+        expr: rate(api_requests_total{status_code=~"5.."}[5m]) / rate(api_requests_total[5m]) * 100 > 5
+        for: 3m
+        labels:
+          severity: warning
+          service: hr-resume-search
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value }}%, which is above the 5% threshold"
+          runbook_url: "https://docs.example.com/runbooks/high-error-rate"
+
+      # Database query performance alert
+      - alert: SlowDatabaseQueries
+        expr: histogram_quantile(0.95, rate(db_query_duration_seconds_bucket[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: hr-resume-search
+        annotations:
+          summary: "Slow database queries detected"
+          description: "95th percentile DB query time is {{ $value }}s, which is above the 100ms threshold"
+          runbook_url: "https://docs.example.com/runbooks/slow-database"
+
+      # Low cache hit rate alert
+      - alert: LowCacheHitRate
+        expr: rate(search_cache_hits_total[5m]) / (rate(search_cache_hits_total[5m]) + rate(search_cache_misses_total[5m])) * 100 < 50
+        for: 10m
+        labels:
+          severity: warning
+          service: hr-resume-search
+        annotations:
+          summary: "Low cache hit rate detected"
+          description: "Cache hit rate is {{ $value }}%, which is below the 50% threshold"
+          runbook_url: "https://docs.example.com/runbooks/low-cache-hit-rate"
+
+      # High memory usage alert
+      - alert: HighMemoryUsage
+        expr: memory_usage_bytes{type="rss"} / 1024 / 1024 > 1024  # 1GB
+        for: 5m
+        labels:
+          severity: warning
+          service: hr-resume-search
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is {{ $value }}MB, which is above the 1GB threshold"
+          runbook_url: "https://docs.example.com/runbooks/high-memory-usage"
+
+      # Resume parsing failure rate
+      - alert: HighResumeParsingFailureRate
+        expr: rate(resume_parsing_total{status="error"}[5m]) / rate(resume_parsing_total[5m]) * 100 > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: hr-resume-search
+        annotations:
+          summary: "High resume parsing failure rate"
+          description: "Resume parsing failure rate is {{ $value }}%, which is above the 10% threshold"
+          runbook_url: "https://docs.example.com/runbooks/resume-parsing-failures"
+
+      # Search zero results rate
+      - alert: HighZeroResultsRate
+        expr: rate(search_zero_results_total[5m]) / rate(search_requests_total[5m]) * 100 > 20
+        for: 10m
+        labels:
+          severity: info
+          service: hr-resume-search
+        annotations:
+          summary: "High zero results rate for searches"
+          description: "{{ $value }}% of searches are returning zero results, which may indicate data quality issues"
+          runbook_url: "https://docs.example.com/runbooks/zero-search-results"
+
+      # Database connection pool exhaustion
+      - alert: DatabaseConnectionPoolExhaustion
+        expr: db_connections_active / db_connection_pool_size > 0.8
+        for: 2m
+        labels:
+          severity: warning
+          service: hr-resume-search
+        annotations:
+          summary: "Database connection pool near exhaustion"
+          description: "{{ $value | humanizePercentage }} of database connection pool is in use"
+          runbook_url: "https://docs.example.com/runbooks/db-connection-pool"
+
+  - name: hr_resume_search_recording_rules
+    rules:
+      # Recording rule for API success rate
+      - record: api_success_rate
+        expr: rate(api_requests_total{status_code!~"5.."}[5m]) / rate(api_requests_total[5m]) * 100
+
+      # Recording rule for search performance
+      - record: search_p95_latency
+        expr: histogram_quantile(0.95, rate(search_duration_seconds_bucket[5m]))
+
+      # Recording rule for database performance
+      - record: db_p95_latency
+        expr: histogram_quantile(0.95, rate(db_query_duration_seconds_bucket[5m]))
+
+      # Recording rule for cache efficiency
+      - record: cache_hit_rate_percent
+        expr: rate(search_cache_hits_total[5m]) / (rate(search_cache_hits_total[5m]) + rate(search_cache_misses_total[5m])) * 100
+
+      # Recording rule for resume processing success rate
+      - record: resume_processing_success_rate
+        expr: rate(resume_parsing_total{status="success"}[5m]) / rate(resume_parsing_total[5m]) * 100

@@ -1,23 +1,30 @@
-# Deployment Guide - HR Resume Search MCP API
+# Production Deployment Guide - HR Resume Search MCP API
 
 ## 🚀 Deployment Overview
 
-This guide covers deployment strategies for different environments:
-- Local Development
-- Docker Deployment  
-- Kubernetes Deployment
-- Cloud Deployment (AWS/GCP/Azure)
+This comprehensive guide covers production-ready deployment strategies with enhanced monitoring, metrics, and security features:
+
+- **Local Development**: Docker Compose with hot reload
+- **Staging Environment**: Kubernetes with limited resources  
+- **Production Environment**: Multi-zone Kubernetes with auto-scaling
+- **Cloud Deployment**: AWS/GCP/Azure with managed services
+- **MCP Server Deployment**: Dedicated MCP server instances
+- **Monitoring Stack**: Prometheus + Grafana + Custom Metrics
 
 ## 📋 Pre-Deployment Checklist
 
 ### Required Configuration
 - [ ] All environment variables configured
-- [ ] Database credentials secured
-- [ ] Redis connection configured
-- [ ] Claude API key set
-- [ ] JWT secret key generated (strong, unique)
-- [ ] CORS origins configured
-- [ ] SSL certificates ready (production)
+- [ ] Database credentials secured (PostgreSQL 15+)
+- [ ] Redis connection configured (Redis 7+)
+- [ ] Claude API key set and tested
+- [ ] JWT secret key generated (strong, unique, 32+ chars)
+- [ ] CORS origins configured for production domains
+- [ ] SSL certificates ready (Let's Encrypt or commercial)
+- [ ] Prometheus metrics enabled (`ENABLE_METRICS=true`)
+- [ ] MCP server configuration validated
+- [ ] Search metrics middleware configured
+- [ ] Rate limiting parameters tuned
 
 ### Security Review
 - [ ] No hardcoded secrets in code

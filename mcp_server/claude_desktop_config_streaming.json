@@ -1,0 +1,57 @@
+{
+  "mcpServers": {
+    "hr-resume-search-streaming": {
+      "command": "python",
+      "args": ["-m", "mcp_server.ag_ui_server"],
+      "env": {
+        "FASTAPI_BASE_URL": "http://localhost:8000",
+        "MCP_TIMEOUT": "30",
+        "STREAM_CHUNK_DELAY": "0.1",
+        "LOG_LEVEL": "INFO",
+        "PYTHONPATH": "."
+      },
+      "description": "HR Resume Search MCP Server with AG-UI streaming support",
+      "capabilities": {
+        "streaming": true,
+        "realtime": true,
+        "proxy": true
+      }
+    },
+    "hr-resume-search-legacy": {
+      "command": "python", 
+      "args": ["-m", "mcp_server.server"],
+      "env": {
+        "LOG_FILE": "",
+        "PYTHONPATH": "."
+      },
+      "description": "Legacy HR Resume Search MCP Server (non-streaming)"
+    }
+  },
+  "globalShortcuts": {
+    "search_candidates": "Ctrl+Shift+S",
+    "upload_resume": "Ctrl+Shift+U",
+    "check_api_status": "Ctrl+Shift+H"
+  },
+  "ui": {
+    "streaming": {
+      "enabled": true,
+      "chunkDelay": 100,
+      "progressIndicators": true,
+      "realTimeUpdates": true
+    },
+    "theme": {
+      "primary": "#2563eb",
+      "secondary": "#64748b", 
+      "success": "#16a34a",
+      "warning": "#d97706",
+      "error": "#dc2626"
+    }
+  },
+  "features": {
+    "enableAuthentication": true,
+    "enableCaching": true,
+    "enableMetrics": true,
+    "maxConcurrentRequests": 5,
+    "defaultTimeout": 30000
+  }
+}

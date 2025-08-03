@@ -25,6 +25,10 @@ from .routers import auth, search, resumes, projects, endpoints
 from .database import init_db, check_db_connection
 from .config import settings
 
+# Import metrics components
+from .services.metrics_service import metrics_service
+from .middleware.metrics_middleware import MetricsMiddleware, create_metrics_endpoint
+
 # Configure logging with JSON format for production
 if settings.is_production:
     from pythonjsonlogger import jsonlogger
@@ -81,6 +85,14 @@ async def lifespan(app: FastAPI):
         logger.error(f"Failed to initialize database: {e}")
         raise
     
+    # Initialize Prometheus metrics server
+    try:
+        if settings.enable_metrics:
+            metrics_service.start_metrics_server(port=9090)
+            logger.info("Prometheus metrics server started on port 9090")
+    except Exception as e:
+        logger.warning(f"Failed to start Prometheus metrics server: {e}")
+    
     # TODO: Initialize Redis connection when implemented
     # TODO: Initialize MCP server connection when implemented
     
@@ -119,6 +131,10 @@ if settings.is_production:
         TrustedHostMiddleware,
         allowed_hosts=["*"]  # TODO: Configure with actual allowed hosts
     )
+
+# Add Prometheus metrics middleware
+if settings.enable_metrics:
+    app.add_middleware(MetricsMiddleware, collect_body_size=True)
 
 # Configure CORS from environment variables
 app.add_middleware(
@@ -284,6 +300,11 @@ app.include_router(search.router)
 app.include_router(resumes.router)
 app.include_router(projects.router)
 app.include_router(endpoints.router)
+
+# Include Prometheus metrics router
+if settings.enable_metrics:
+    metrics_router = create_metrics_endpoint()
+    app.include_router(metrics_router, tags=["Monitoring"])
 
 
 @app.get("/", tags=["Root"])
